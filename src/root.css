@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.postImage {
+  max-height: 30vh;
+  max-width: 30vw;
+  object-fit: cover;
+  aspect-ratio: 1;
+}
+
+.postSize {
+  width: 40vw;
+  min-height: 40vh;
+}
