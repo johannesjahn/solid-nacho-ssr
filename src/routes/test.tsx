@@ -2,6 +2,7 @@ import { For, onMount } from "solid-js";
 import { useRouteData } from "solid-start";
 import { createServerData$ } from "solid-start/server";
 import { PostApi } from "~/api";
+import HeaderComponent from "~/components/header";
 import PostComponent from "~/components/post";
 
 const TestComponent = () => {
@@ -14,6 +15,7 @@ const TestComponent = () => {
 
   return (
     <>
+      <HeaderComponent />
       <div class="flex flex-col justify-center items-center">
         <For each={items()}>{(post) => <PostComponent post={post} />}</For>
       </div>
