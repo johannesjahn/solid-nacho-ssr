@@ -6,8 +6,7 @@ const HeaderComponent = () => {
   const [username, setUsername] = createSignal<string>("");
   const [password, setPassword] = createSignal<string>("");
 
-  const loginHandler = async (data) => {
-    console.log(data);
+  const loginHandler = async () => {
     const loginResponse = await new AuthApi().authControllerLogin({
       loginDTO: { username: username(), password: password() },
     });
