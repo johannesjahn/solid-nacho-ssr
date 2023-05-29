@@ -7,7 +7,7 @@ import {
   UserApi,
   UserResponseDTO,
 } from "~/api";
-import { useMe } from "./me";
+import { useMe } from "./context/me";
 
 const HeaderComponent = () => {
   const [username, setUsername] = createSignal<string>("");

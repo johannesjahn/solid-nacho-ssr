@@ -2,39 +2,39 @@ var manifest = {
 	"/": [
 	{
 		type: "script",
-		href: "/assets/index-f4907011.js"
+		href: "/assets/index-80b317ba.js"
 	},
 	{
 		type: "script",
-		href: "/assets/entry-client-d813ef09.js"
+		href: "/assets/entry-client-fe5347ba.js"
 	},
 	{
 		type: "style",
-		href: "/assets/entry-client-3c93b2f1.css"
+		href: "/assets/entry-client-23ef8e25.css"
 	}
 ],
 	"/test": [
 	{
 		type: "script",
-		href: "/assets/test-0b2c0f98.js"
+		href: "/assets/test-1a68bd96.js"
 	},
 	{
 		type: "script",
-		href: "/assets/entry-client-d813ef09.js"
+		href: "/assets/entry-client-fe5347ba.js"
 	},
 	{
 		type: "style",
-		href: "/assets/entry-client-3c93b2f1.css"
+		href: "/assets/entry-client-23ef8e25.css"
 	}
 ],
 	"entry-client": [
 	{
 		type: "script",
-		href: "/assets/entry-client-d813ef09.js"
+		href: "/assets/entry-client-fe5347ba.js"
 	},
 	{
 		type: "style",
-		href: "/assets/entry-client-3c93b2f1.css"
+		href: "/assets/entry-client-23ef8e25.css"
 	}
 ],
 	"index.html": [
@@ -2854,7 +2854,7 @@ async function editTodoFn$1(form) {
   return redirect("/");
 }
 
-const _tmpl$$5 = ["<div", " style=\"", "\"><div style=\"", "\"><p style=\"", "\" id=\"error-message\">", "</p><button id=\"reset-errors\" style=\"", "\">Clear errors and retry</button><pre style=\"", "\">", "</pre></div></div>"];
+const _tmpl$$6 = ["<div", " style=\"", "\"><div style=\"", "\"><p style=\"", "\" id=\"error-message\">", "</p><button id=\"reset-errors\" style=\"", "\">Clear errors and retry</button><pre style=\"", "\">", "</pre></div></div>"];
 function ErrorBoundary(props) {
   return createComponent(ErrorBoundary$1, {
     fallback: (e, reset) => {
@@ -2878,7 +2878,7 @@ function ErrorBoundary(props) {
   });
 }
 function ErrorMessage(props) {
-  return ssr(_tmpl$$5, ssrHydrationKey(), "padding:" + "16px", "background-color:" + "rgba(252, 165, 165)" + (";color:" + "rgb(153, 27, 27)") + (";border-radius:" + "5px") + (";overflow:" + "scroll") + (";padding:" + "16px") + (";margin-bottom:" + "8px"), "font-weight:" + "bold", escape(props.error.message), "color:" + "rgba(252, 165, 165)" + (";background-color:" + "rgb(153, 27, 27)") + (";border-radius:" + "5px") + (";padding:" + "4px 8px"), "margin-top:" + "8px" + (";width:" + "100%"), escape(props.error.stack));
+  return ssr(_tmpl$$6, ssrHydrationKey(), "padding:" + "16px", "background-color:" + "rgba(252, 165, 165)" + (";color:" + "rgb(153, 27, 27)") + (";border-radius:" + "5px") + (";overflow:" + "scroll") + (";padding:" + "16px") + (";margin-bottom:" + "8px"), "font-weight:" + "bold", escape(props.error.message), "color:" + "rgba(252, 165, 165)" + (";background-color:" + "rgb(153, 27, 27)") + (";border-radius:" + "5px") + (";padding:" + "4px 8px"), "margin-top:" + "8px" + (";width:" + "100%"), escape(props.error.stack));
 }
 
 const routeLayouts = {
@@ -2892,8 +2892,8 @@ const routeLayouts = {
   }
 };
 
-const _tmpl$$4 = ["<link", " rel=\"stylesheet\"", ">"],
-  _tmpl$2$3 = ["<link", " rel=\"modulepreload\"", ">"];
+const _tmpl$$5 = ["<link", " rel=\"stylesheet\"", ">"],
+  _tmpl$2$5 = ["<link", " rel=\"modulepreload\"", ">"];
 function flattenIslands(match, manifest) {
   let result = [...match];
   match.forEach(m => {
@@ -2922,7 +2922,7 @@ function getAssetsFromManifest(manifest, routerContext) {
   match.push(...(manifest["entry-client"] || []));
   match = manifest ? flattenIslands(match, manifest) : [];
   const links = match.reduce((r, src) => {
-    r[src.href] = src.type === "style" ? ssr(_tmpl$$4, ssrHydrationKey(), ssrAttribute("href", escape(src.href, true), false)) : src.type === "script" ? ssr(_tmpl$2$3, ssrHydrationKey(), ssrAttribute("href", escape(src.href, true), false)) : undefined;
+    r[src.href] = src.type === "style" ? ssr(_tmpl$$5, ssrHydrationKey(), ssrAttribute("href", escape(src.href, true), false)) : src.type === "script" ? ssr(_tmpl$2$5, ssrHydrationKey(), ssrAttribute("href", escape(src.href, true), false)) : undefined;
     return r;
   }, {});
   return Object.values(links);
@@ -2973,18 +2973,18 @@ function Body(props) {
   }
 }
 
-const _tmpl$$3 = ["<svg", " xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"-3 -3 105 105\"><circle cx=\"50\" cy=\"50\" r=\"50\" fill=\"none\" stroke=\"#ededed\" stroke-width=\"3\"></circle></svg>"],
-  _tmpl$2$2 = ["<svg", " xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"-3 -3 105 105\"><circle cx=\"50\" cy=\"50\" r=\"50\" fill=\"none\" stroke=\"#bddad5\" stroke-width=\"3\"></circle><path fill=\"#5dc2af\" d=\"M72 25L42 71 27 56l-4 4 20 20 34-52z\"></path></svg>"];
+const _tmpl$$4 = ["<svg", " xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"-3 -3 105 105\"><circle cx=\"50\" cy=\"50\" r=\"50\" fill=\"none\" stroke=\"#ededed\" stroke-width=\"3\"></circle></svg>"],
+  _tmpl$2$4 = ["<svg", " xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"-3 -3 105 105\"><circle cx=\"50\" cy=\"50\" r=\"50\" fill=\"none\" stroke=\"#bddad5\" stroke-width=\"3\"></circle><path fill=\"#5dc2af\" d=\"M72 25L42 71 27 56l-4 4 20 20 34-52z\"></path></svg>"];
 function IncompleteIcon() {
-  return ssr(_tmpl$$3, ssrHydrationKey());
+  return ssr(_tmpl$$4, ssrHydrationKey());
 }
 function CompleteIcon() {
-  return ssr(_tmpl$2$2, ssrHydrationKey());
+  return ssr(_tmpl$2$4, ssrHydrationKey());
 }
 
-const _tmpl$$2 = ["<input", " name=\"title\" class=\"new-todo\" placeholder=\"What needs to be done?\" autofocus>"],
-  _tmpl$2$1 = ["<input", " name=\"completed\" type=\"hidden\"", ">"],
-  _tmpl$3$1 = ["<button", " class=\"", "\" type=\"submit\">\u276F</button>"],
+const _tmpl$$3 = ["<input", " name=\"title\" class=\"new-todo\" placeholder=\"What needs to be done?\" autofocus>"],
+  _tmpl$2$3 = ["<input", " name=\"completed\" type=\"hidden\"", ">"],
+  _tmpl$3$2 = ["<button", " class=\"", "\" type=\"submit\">\u276F</button>"],
   _tmpl$4 = ["<button", " class=\"clear-completed\">Clear completed</button>"],
   _tmpl$5 = ["<footer", " class=\"footer\"><span class=\"todo-count\"><strong>", "</strong> <!--#-->", "<!--/--> left</span><ul class=\"filters\"><li>", "</li><li>", "</li><li>", "</li></ul><!--#-->", "<!--/--></footer>"],
   _tmpl$6 = ["<section", " class=\"todoapp\"><header class=\"header\"><h1 class=\"bg-red-700\">todos</h1><!--#-->", "<!--/--></header><section class=\"main\"><!--#-->", "<!--/--><ul class=\"todo-list\"><!--#-->", "<!--/--><!--#-->", "<!--/--></ul></section><!--#-->", "<!--/--></section>"],
@@ -3033,7 +3033,7 @@ const TodoApp = () => {
       setTimeout(() => inputRef.value = "");
     },
     get children() {
-      return ssr(_tmpl$$2, ssrHydrationKey());
+      return ssr(_tmpl$$3, ssrHydrationKey());
     }
   })), escape(createComponent(Show, {
     get when() {
@@ -3042,7 +3042,7 @@ const TodoApp = () => {
     get children() {
       return createComponent(toggleAll.Form, {
         get children() {
-          return [ssr(_tmpl$2$1, ssrHydrationKey(), ssrAttribute("value", escape(String(!remainingCount()), true), false)), ssr(_tmpl$3$1, ssrHydrationKey(), `toggle-all ${!remainingCount() ? "checked" : ""}`)];
+          return [ssr(_tmpl$2$3, ssrHydrationKey(), ssrAttribute("value", escape(String(!remainingCount()), true), false)), ssr(_tmpl$3$2, ssrHydrationKey(), `toggle-all ${!remainingCount() ? "checked" : ""}`)];
         }
       });
     }
@@ -3968,46 +3968,111 @@ class PostApi extends BaseAPI {
   }
 }
 
-const $$server_module0$1 = server$.createHandler(async function $$serverHandler0() {
-  return new PostApi().postControllerGetPosts();
-}, "/_m/0dfa2eed94/routeData", true);
-server$.registerHandler("/_m/0dfa2eed94/routeData", $$server_module0$1);
-const routeData = () => createRouteData($$server_module0$1);
-
-const _tmpl$$1 = ["<p", " class=\"contents\">", "</p>"],
-  _tmpl$2 = ["<img", " class=\"postImage\"", ">"],
-  _tmpl$3 = ["<div", " class=\"card bg-base-200 shadow-xl m-5 postSize\"><div class=\"card-body flex flex-col justify-center items-center\"><!--#-->", "<!--/--><!--#-->", "<!--/--></div><div class=\"flex flex-row items-center justify-end m-2\"><div class=\"avatar\"><div class=\"w-10 rounded-full\"><img src=\"", "\"></div></div><p class=\"text-xs m-2\"><!--#-->", "<!--/-->, <!--#-->", "<!--/--></p></div></div>"];
+const _tmpl$$2 = ["<p", " class=\"contents\">", "</p>"],
+  _tmpl$2$2 = ["<img", " class=\"postImage\"", ">"],
+  _tmpl$3$1 = ["<div", " class=\"card bg-base-200 shadow-xl m-5 postSize\"><div class=\"card-body flex flex-col justify-center items-center\"><!--#-->", "<!--/--><!--#-->", "<!--/--></div><div class=\"flex flex-row items-center justify-end m-2\"><div class=\"avatar\"><div class=\"w-10 rounded-full\"><img src=\"", "\"></div></div><p class=\"text-xs m-2\"><!--#-->", "<!--/-->, <!--#-->", "<!--/--></p></div></div>"];
 const PostComponent = ({
   post
 }) => {
-  return ssr(_tmpl$3, ssrHydrationKey(), escape(createComponent(Show, {
+  return ssr(_tmpl$3$1, ssrHydrationKey(), escape(createComponent(Show, {
     get when() {
       return post.contentType == "TEXT";
     },
     get children() {
-      return ssr(_tmpl$$1, ssrHydrationKey(), escape(post.content));
+      return ssr(_tmpl$$2, ssrHydrationKey(), escape(post.content));
     }
   })), escape(createComponent(Show, {
     get when() {
       return post.contentType == "IMAGE_URL";
     },
     get children() {
-      return ssr(_tmpl$2, ssrHydrationKey(), ssrAttribute("src", escape(post.content, true), false));
+      return ssr(_tmpl$2$2, ssrHydrationKey(), ssrAttribute("src", escape(post.content, true), false));
     }
   })), escape(BASE_PATH, true) + "/app/user/avatar/" + escape(post.author.id, true), escape(post.author.username), escape(post.createdAt.toLocaleDateString()));
 };
 
-const _tmpl$ = ["<div", " class=\"flex flex-col justify-center items-center\">", "</div>"];
-const TestComponent = () => {
-  const items = useRouteData();
-  return ssr(_tmpl$, ssrHydrationKey(), escape(createComponent(For, {
-    get each() {
-      return items();
+const $$server_module0$1 = server$.createHandler(async function $$serverHandler0() {
+  return new PostApi().postControllerGetPosts();
+}, "/_m/0dfa2eed94/routeData", true);
+server$.registerHandler("/_m/0dfa2eed94/routeData", $$server_module0$1);
+const routeData = () => createRouteData($$server_module0$1);
+
+const MeContext = createContext();
+const MeProvider = props => {
+  const signal = createSignal(null);
+  return createComponent(MeContext.Provider, {
+    value: signal,
+    get children() {
+      return props.children;
+    }
+  });
+};
+const useMe = () => {
+  return useContext(MeContext);
+};
+
+const _tmpl$$1 = ["<div", " class=\"flex flex-row gap-4 m-4 h-11\"><input type=\"text\" placeholder=\"Username\" class=\"input w-full max-w-xs\"><input type=\"password\" placeholder=\"Password\" class=\"input w-full max-w-xs\"><button class=\"btn\">Login</button></div>"],
+  _tmpl$2$1 = ["<div", " class=\"avatar m-4 h-11\"><div class=\"w-10 rounded-full\"><img src=\"", "\"></div></div>"],
+  _tmpl$3 = ["<div", " class=\"flex flex-row justify-between items-center\"><div class=\"m-4 text-xl\">Solid Nacho</div><!--#-->", "<!--/--><!--#-->", "<!--/--></div>"];
+const HeaderComponent = () => {
+  const [me, setMe] = useMe();
+  return ssr(_tmpl$3, ssrHydrationKey(), escape(createComponent(Show, {
+    get when() {
+      return me() == null;
     },
+    get children() {
+      return ssr(_tmpl$$1, ssrHydrationKey());
+    }
+  })), escape(createComponent(Show, {
+    get when() {
+      return me() != null;
+    },
+    get children() {
+      return ssr(_tmpl$2$1, ssrHydrationKey(), escape(BASE_PATH, true) + "/app/user/avatar/" + escape(me().id, true));
+    }
+  })));
+};
+
+const PostContext = createContext();
+const PostProvider = props => {
+  const store = createStore(props.initial);
+  return createComponent(PostContext.Provider, {
+    value: store,
+    get children() {
+      return props.children;
+    }
+  });
+};
+const usePost = () => {
+  return useContext(PostContext);
+};
+
+const _tmpl$ = ["<div", " class=\"flex flex-col justify-center items-center\">", "</div>"],
+  _tmpl$2 = ["<div", " class=\"w-full sticky bottom-0 flex flex-row-reverse\"><div class=\"btn btn-circle m-10\">+</div></div>"];
+const PostsContainerComponent = () => {
+  const [posts, setPosts] = usePost();
+  return [ssr(_tmpl$, ssrHydrationKey(), escape(createComponent(For, {
+    each: posts,
     children: post => createComponent(PostComponent, {
       post: post
     })
-  })));
+  }))), ssr(_tmpl$2, ssrHydrationKey())];
+};
+
+const TestComponent = () => {
+  const items = useRouteData();
+  return createComponent(MeProvider, {
+    get children() {
+      return createComponent(PostProvider, {
+        get initial() {
+          return items();
+        },
+        get children() {
+          return [createComponent(HeaderComponent, {}), createComponent(PostsContainerComponent, {})];
+        }
+      });
+    }
+  });
 };
 const $$server_module0 = server$.createHandler(async function $$serverHandler0() {
   return new PostApi().postControllerGetPosts();

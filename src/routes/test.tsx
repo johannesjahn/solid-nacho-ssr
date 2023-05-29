@@ -5,8 +5,10 @@ import { Configuration } from "~/api";
 import { DefaultConfig } from "~/api";
 import { PostApi } from "~/api";
 import HeaderComponent from "~/components/header";
-import { MeProvider } from "~/components/me";
+import { MeProvider } from "~/components/context/me";
 import PostComponent from "~/components/post";
+import PostsContainerComponent from "~/components/postsContainer";
+import { PostProvider } from "~/components/context/post";
 
 const TestComponent = () => {
   const items = useRouteData<typeof routeData>();
@@ -20,13 +22,10 @@ const TestComponent = () => {
 
   return (
     <MeProvider>
-      <HeaderComponent />
-      <div class="flex flex-col justify-center items-center">
-        <For each={items()}>{(post) => <PostComponent post={post} />}</For>
-      </div>
-      <div class="w-full sticky bottom-0 flex flex-row-reverse">
-        <div class="btn btn-circle m-10">+</div>
-      </div>
+      <PostProvider initial={items()}>
+        <HeaderComponent />
+        <PostsContainerComponent />
+      </PostProvider>
     </MeProvider>
   );
 };
