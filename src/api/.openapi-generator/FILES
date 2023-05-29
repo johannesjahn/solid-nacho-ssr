@@ -1,4 +1,3 @@
-.openapi-generator-ignore
 apis/AuthApi.ts
 apis/ChatApi.ts
 apis/DefaultApi.ts
