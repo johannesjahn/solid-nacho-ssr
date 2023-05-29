@@ -24,6 +24,9 @@ const TestComponent = () => {
       <div class="flex flex-col justify-center items-center">
         <For each={items()}>{(post) => <PostComponent post={post} />}</For>
       </div>
+      <div class="w-full sticky bottom-0 flex flex-row-reverse">
+        <div class="btn btn-circle m-10">+</div>
+      </div>
     </MeProvider>
   );
 };
