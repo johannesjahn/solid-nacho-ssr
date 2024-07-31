@@ -2,46 +2,31 @@ var manifest = {
 	"/": [
 	{
 		type: "script",
-		href: "/assets/index-80b317ba.js"
+		href: "/assets/index-29fa5fec.js"
 	},
 	{
 		type: "script",
-		href: "/assets/entry-client-fe5347ba.js"
+		href: "/assets/entry-client-fccfd2e7.js"
 	},
 	{
 		type: "style",
-		href: "/assets/entry-client-23ef8e25.css"
-	}
-],
-	"/test": [
-	{
-		type: "script",
-		href: "/assets/test-1a68bd96.js"
-	},
-	{
-		type: "script",
-		href: "/assets/entry-client-fe5347ba.js"
-	},
-	{
-		type: "style",
-		href: "/assets/entry-client-23ef8e25.css"
+		href: "/assets/entry-client-e9f0c8d5.css"
 	}
 ],
 	"entry-client": [
 	{
 		type: "script",
-		href: "/assets/entry-client-fe5347ba.js"
+		href: "/assets/entry-client-fccfd2e7.js"
 	},
 	{
 		type: "style",
-		href: "/assets/entry-client-23ef8e25.css"
+		href: "/assets/entry-client-e9f0c8d5.css"
 	}
 ],
 	"index.html": [
 ]
 };
 
-const $TRACK = Symbol("solid-track");
 const ERROR = Symbol("error");
 function castError(err) {
   if (err instanceof Error) return err;
@@ -49,11 +34,15 @@ function castError(err) {
     cause: err
   });
 }
-function handleError(err) {
+function handleError(err, owner = Owner) {
+  const fns = owner && owner.context && owner.context[ERROR];
   const error = castError(err);
-  const fns = lookup(Owner, ERROR);
   if (!fns) throw error;
-  for (const f of fns) f(error);
+  try {
+    for (const f of fns) f(error);
+  } catch (e) {
+    handleError(e, owner && owner.owner || null);
+  }
 }
 const UNOWNED = {
   context: null,
@@ -65,7 +54,7 @@ let Owner = null;
 function createOwner() {
   const o = {
     owner: Owner,
-    context: null,
+    context: Owner ? Owner.context : null,
     owned: null,
     cleanups: null
   };
@@ -76,9 +65,10 @@ function createOwner() {
 }
 function createRoot(fn, detachedOwner) {
   const owner = Owner,
+    current = detachedOwner === undefined ? owner : detachedOwner,
     root = fn.length === 0 ? UNOWNED : {
-      context: null,
-      owner: detachedOwner === undefined ? owner : detachedOwner,
+      context: current ? current.context : null,
+      owner: current,
       owned: null,
       cleanups: null
     };
@@ -155,14 +145,12 @@ function cleanNode(node) {
   }
 }
 function catchError(fn, handler) {
-  Owner = {
-    owner: Owner,
-    context: {
-      [ERROR]: [handler]
-    },
-    owned: null,
-    cleanups: null
+  const owner = createOwner();
+  owner.context = {
+    ...owner.context,
+    [ERROR]: [handler]
   };
+  Owner = owner;
   try {
     return fn();
   } catch (err) {
@@ -180,8 +168,7 @@ function createContext(defaultValue) {
   };
 }
 function useContext(context) {
-  let ctx;
-  return (ctx = lookup(Owner, context.id)) !== undefined ? ctx : context.defaultValue;
+  return Owner && Owner.context && Owner.context[context.id] !== undefined ? Owner.context[context.id] : context.defaultValue;
 }
 function getOwner() {
   return Owner;
@@ -205,9 +192,6 @@ function runWithOwner(o, fn) {
     Owner = prev;
   }
 }
-function lookup(owner, key) {
-  return owner ? owner.context && owner.context[key] !== undefined ? owner.context[key] : lookup(owner.owner, key) : undefined;
-}
 function resolveChildren(children) {
   if (typeof children === "function" && !children.length) return resolveChildren(children());
   if (Array.isArray(children)) {
@@ -224,6 +208,7 @@ function createProvider(id) {
   return function provider(props) {
     return createMemo(() => {
       Owner.context = {
+        ...Owner.context,
         [id]: props.value
       };
       return children(() => props.children);
@@ -236,29 +221,46 @@ function resolveSSRNode$1(node) {
   if (t === "string") return node;
   if (node == null || t === "boolean") return "";
   if (Array.isArray(node)) {
+    let prev = {};
     let mapped = "";
-    for (let i = 0, len = node.length; i < len; i++) mapped += resolveSSRNode$1(node[i]);
+    for (let i = 0, len = node.length; i < len; i++) {
+      if (typeof prev !== "object" && typeof node[i] !== "object") mapped += `<!--!$-->`;
+      mapped += resolveSSRNode$1(prev = node[i]);
+    }
     return mapped;
   }
   if (t === "object") return node.t;
   if (t === "function") return resolveSSRNode$1(node());
   return String(node);
 }
-const sharedConfig = {};
+const sharedConfig = {
+  context: undefined,
+  getContextId() {
+    if (!this.context) throw new Error(`getContextId cannot be used under non-hydrating context`);
+    return getContextId(this.context.count);
+  },
+  getNextContextId() {
+    if (!this.context) throw new Error(`getNextContextId cannot be used under non-hydrating context`);
+    return getContextId(this.context.count++);
+  }
+};
+function getContextId(count) {
+  const num = String(count),
+    len = num.length - 1;
+  return sharedConfig.context.id + (len ? String.fromCharCode(96 + len) : "") + num;
+}
 function setHydrateContext(context) {
   sharedConfig.context = context;
 }
 function nextHydrateContext() {
   return sharedConfig.context ? {
     ...sharedConfig.context,
-    id: `${sharedConfig.context.id}${sharedConfig.context.count++}-`,
+    id: sharedConfig.getNextContextId(),
     count: 0
   } : undefined;
 }
 function createUniqueId() {
-  const ctx = sharedConfig.context;
-  if (!ctx) throw new Error(`createUniqueId cannot be used under non-hydrating context`);
-  return `${ctx.id}${ctx.count++}`;
+  return sharedConfig.getNextContextId();
 }
 function createComponent(Comp, props) {
   if (sharedConfig.context && !sharedConfig.context.noHydrate) {
@@ -269,46 +271,6 @@ function createComponent(Comp, props) {
     return r;
   }
   return Comp(props || {});
-}
-function mergeProps(...sources) {
-  const target = {};
-  for (let i = 0; i < sources.length; i++) {
-    let source = sources[i];
-    if (typeof source === "function") source = source();
-    if (source) {
-      const descriptors = Object.getOwnPropertyDescriptors(source);
-      for (const key in descriptors) {
-        if (key in target) continue;
-        Object.defineProperty(target, key, {
-          enumerable: true,
-          get() {
-            for (let i = sources.length - 1; i >= 0; i--) {
-              let s = sources[i] || {};
-              if (typeof s === "function") s = s();
-              const v = s[key];
-              if (v !== undefined) return v;
-            }
-          }
-        });
-      }
-    }
-  }
-  return target;
-}
-function splitProps(props, ...keys) {
-  const descriptors = Object.getOwnPropertyDescriptors(props),
-    split = k => {
-      const clone = {};
-      for (let i = 0; i < k.length; i++) {
-        const key = k[i];
-        if (descriptors[key]) {
-          Object.defineProperty(clone, key, descriptors[key]);
-          delete descriptors[key];
-        }
-      }
-      return clone;
-    };
-  return keys.map(split).concat(split(Object.keys(descriptors)));
 }
 function simpleMap(props, wrap) {
   const list = props.each || [],
@@ -334,10 +296,10 @@ function ErrorBoundary$1(props) {
     clean,
     sync = true;
   const ctx = sharedConfig.context;
-  const id = ctx.id + ctx.count;
+  const id = sharedConfig.getContextId();
   function displayFallback() {
     cleanNode(clean);
-    ctx.writeResource(id, error, true);
+    ctx.serialize(id, error);
     setHydrateContext({
       ...ctx,
       count: 0
@@ -356,7 +318,7 @@ function ErrorBoundary$1(props) {
   if (error) return displayFallback();
   sync = false;
   return {
-    t: `<!!$e${id}>${resolveSSRNode$1(res)}<!!$/e${id}>`
+    t: `<!--!$e${id}-->${resolveSSRNode$1(res)}<!--!$/e${id}-->`
   };
 }
 const SuspenseContext = createContext();
@@ -373,7 +335,7 @@ function createResource(source, fetcher, options = {}) {
     source = true;
   }
   const contexts = new Set();
-  const id = sharedConfig.context.id + sharedConfig.context.count++;
+  const id = sharedConfig.getNextContextId();
   let resource = {};
   let value = options.storage ? options.storage(options.initialValue)[0]() : options.initialValue;
   let p;
@@ -387,8 +349,8 @@ function createResource(source, fetcher, options = {}) {
   }
   const read = () => {
     if (error) throw error;
-    if (resourceContext && p) resourceContext.push(p);
     const resolved = options.ssrLoadFrom !== "initial" && sharedConfig.context.async && "data" in sharedConfig.context.resources[id];
+    if (!resolved && resourceContext) resourceContext.push(id);
     if (!resolved && read.loading) {
       const ctx = useContext(SuspenseContext);
       if (ctx) {
@@ -413,14 +375,14 @@ function createResource(source, fetcher, options = {}) {
       value = ctx.resources[id].data;
       return;
     }
-    resourceContext = [];
-    const lookup = typeof source === "function" ? source() : source;
-    if (resourceContext.length) {
-      p = Promise.all(resourceContext).then(() => fetcher(source(), {
-        value
-      }));
+    let lookup;
+    try {
+      resourceContext = [];
+      lookup = typeof source === "function" ? source() : source;
+      if (resourceContext.length) return;
+    } finally {
+      resourceContext = null;
     }
-    resourceContext = null;
     if (!p) {
       if (lookup == null || lookup === false) return;
       p = fetcher(lookup, {
@@ -430,8 +392,7 @@ function createResource(source, fetcher, options = {}) {
     if (p != undefined && typeof p === "object" && "then" in p) {
       read.loading = true;
       read.state = "pending";
-      if (ctx.writeResource) ctx.writeResource(id, p, undefined, options.deferStream);
-      return p.then(res => {
+      p = p.then(res => {
         read.loading = false;
         read.state = "ready";
         ctx.resources[id].data = res;
@@ -444,10 +405,13 @@ function createResource(source, fetcher, options = {}) {
         read.error = error = castError(err);
         p = null;
         notifySuspense(contexts);
+        throw error;
       });
+      if (ctx.serialize) ctx.serialize(id, p, options.deferStream);
+      return p;
     }
     ctx.resources[id].data = p;
-    if (ctx.writeResource) ctx.writeResource(id, p);
+    if (ctx.serialize) ctx.serialize(id, p);
     p = null;
     return ctx.resources[id].data;
   }
@@ -478,7 +442,7 @@ function startTransition(fn) {
 function Suspense(props) {
   let done;
   const ctx = sharedConfig.context;
-  const id = ctx.id + ctx.count;
+  const id = sharedConfig.getContextId();
   const o = createOwner();
   const value = ctx.suspense[id] || (ctx.suspense[id] = {
     resources: new Map(),
@@ -510,18 +474,21 @@ function Suspense(props) {
     }));
   }
   const res = runSuspense();
-  if (suspenseComplete(value)) return res;
+  if (suspenseComplete(value)) {
+    delete ctx.suspense[id];
+    return res;
+  }
   done = ctx.async ? ctx.registerFragment(id) : undefined;
   return catchError(() => {
     if (ctx.async) {
       setHydrateContext({
         ...ctx,
         count: 0,
-        id: ctx.id + "0-f",
+        id: ctx.id + "0F",
         noHydrate: true
       });
       const res = {
-        t: `<template id="pl-${id}"></template>${resolveSSRNode$1(props.fallback)}<!pl-${id}>`
+        t: `<template id="pl-${id}"></template>${resolveSSRNode$1(props.fallback)}<!--pl-${id}-->`
       };
       setHydrateContext(ctx);
       return res;
@@ -529,17 +496,33 @@ function Suspense(props) {
     setHydrateContext({
       ...ctx,
       count: 0,
-      id: ctx.id + "0-f"
+      id: ctx.id + "0F"
     });
-    ctx.writeResource(id, "$$f");
+    ctx.serialize(id, "$$f");
     return props.fallback;
   }, suspenseError);
 }
 
-var I=(c=>(c[c.AggregateError=1]="AggregateError",c[c.ArrayPrototypeValues=2]="ArrayPrototypeValues",c[c.ArrowFunction=4]="ArrowFunction",c[c.BigInt=8]="BigInt",c[c.ErrorPrototypeStack=16]="ErrorPrototypeStack",c[c.Map=32]="Map",c[c.MethodShorthand=64]="MethodShorthand",c[c.ObjectAssign=128]="ObjectAssign",c[c.Promise=256]="Promise",c[c.Set=512]="Set",c[c.Symbol=1024]="Symbol",c[c.TypedArray=2048]="TypedArray",c[c.BigIntTypedArray=4096]="BigIntTypedArray",c))(I||{});var be="hjkmoquxzABCDEFGHIJKLNPQRTUVWXYZ$_",ve=be.length,Ae="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_",ge=Ae.length;function se(e){let r=e%ve,n=be[r];for(e=(e-r)/ve;e>0;)r=e%ge,n+=Ae[r],e=(e-r)/ge;return n}var Le={disabledFeatures:0};function h(e={}){let r=Object.assign({},Le,e||{});return {markedRefs:new Set,refs:new Map,features:8191^r.disabledFeatures}}function V(e){return {stack:[],vars:[],assignments:[],validRefs:[],refSize:0,features:e.features,markedRefs:new Set(e.markedRefs),valueMap:new Map}}function R(e,r){e.markedRefs.add(r);}function m(e,r){let n=e.validRefs[r];n==null&&(n=e.refSize++,e.validRefs[r]=n);let t=e.vars[n];return t==null&&(t=se(n),e.vars[n]=t),t}function P(e,r){let n=e.refs.get(r);return n==null?e.refs.size:n}function z(e,r){let n=e.refs.get(r);if(n==null){let t=e.refs.size;return e.refs.set(r,t),t}return R(e,n),n}function S(e,r){if(!e)throw new Error(r)}function A$2(e){let r="",n=0;for(let t=0,a=e.length;t<a;t++){let o;switch(e[t]){case'"':o='\\"';break;case"\\":o="\\\\";break;case"<":o="\\x3C";break;case`
-`:o="\\n";break;case"\r":o="\\r";break;case"\u2028":o="\\u2028";break;case"\u2029":o="\\u2029";break;default:continue}r+=e.slice(n,t)+o,n=t+1;}return n===0?r=e:r+=e.slice(n),r}var Ie={[0]:"Symbol.asyncIterator",[1]:"Symbol.hasInstance",[2]:"Symbol.isConcatSpreadable",[3]:"Symbol.iterator",[4]:"Symbol.match",[5]:"Symbol.matchAll",[6]:"Symbol.replace",[7]:"Symbol.search",[8]:"Symbol.species",[9]:"Symbol.split",[10]:"Symbol.toPrimitive",[11]:"Symbol.toStringTag",[12]:"Symbol.unscopables"},O={[Symbol.asyncIterator]:0,[Symbol.hasInstance]:1,[Symbol.isConcatSpreadable]:2,[Symbol.iterator]:3,[Symbol.match]:4,[Symbol.matchAll]:5,[Symbol.replace]:6,[Symbol.search]:7,[Symbol.species]:8,[Symbol.split]:9,[Symbol.toPrimitive]:10,[Symbol.toStringTag]:11,[Symbol.unscopables]:12};var T={t:2,i:void 0,s:!0,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0},U={t:2,i:void 0,s:!1,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0},j={t:4,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0},M={t:3,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0},D={t:5,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0},_={t:6,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0},L={t:7,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0},x={t:8,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0};function F(e){return {t:0,i:void 0,s:e,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0}}function K(e){return {t:1,i:void 0,s:A$2(e),l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0}}function W(e,r){return S(e.features&8,'Unsupported type "BigInt"'),{t:9,i:void 0,s:""+r,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0}}function Y(e){return {t:10,i:e,s:void 0,l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0}}function Z(e,r){return {t:11,i:e,s:r.toISOString(),l:void 0,c:void 0,m:void 0,d:void 0,f:void 0,a:void 0}}function G(e,r){return {t:12,i:e,s:void 0,l:void 0,c:r.source,m:r.flags,d:void 0,a:void 0,f:void 0}}function H(e,r,n){let t=n.constructor.name;S(e.features&2048,`Unsupported value type "${t}"`);let a=n.length,o=new Array(a);for(let i=0;i<a;i++)o[i]=""+n[i];return {t:22,i:r,s:o,l:n.byteOffset,c:t,m:void 0,d:void 0,a:void 0,f:void 0}}var ke=4104;function J(e,r,n){let t=n.constructor.name;S((e.features&ke)===ke,`Unsupported value type "${t}"`);let a=n.length,o=new Array(a);for(let i=0;i<a;i++)o[i]=""+n[i];return {t:23,i:r,s:o,l:n.byteOffset,c:t,m:void 0,d:void 0,a:void 0,f:void 0}}function $(e){return {t:24,i:void 0,s:O[e],l:void 0,c:void 0,m:void 0,d:void 0,a:void 0,f:void 0}}function w(e){return e instanceof EvalError?"EvalError":e instanceof RangeError?"RangeError":e instanceof ReferenceError?"ReferenceError":e instanceof SyntaxError?"SyntaxError":e instanceof TypeError?"TypeError":e instanceof URIError?"URIError":"Error"}function C(e,r){let n,t=w(r);r.name!==t?n={name:r.name}:r.constructor.name!==t&&(n={name:r.constructor.name});let a=Object.getOwnPropertyNames(r);for(let o of a)o!=="name"&&o!=="message"&&(o==="stack"?e.features&16&&(n=n||{},n[o]=r[o]):(n=n||{},n[o]=r[o]));return n}function q(e){let r=Object.getOwnPropertyNames(e);if(r.length){let n={};for(let t of r)n[t]=e[t];return n}}function N(e){if(!e||typeof e!="object"||Array.isArray(e))return !1;switch(e.constructor){case Map:case Set:case Int8Array:case Int16Array:case Int32Array:case Uint8Array:case Uint16Array:case Uint32Array:case Uint8ClampedArray:case Float32Array:case Float64Array:case BigInt64Array:case BigUint64Array:return !1;}return Symbol.iterator in e}var xe=/^[$A-Z_][0-9A-Z_$]*$/i;function le(e){let r=e[0];return (r==="$"||r==="_"||r>="A"&&r<="Z"||r>="a"&&r<="z")&&xe.test(e)}function ne(e){switch(e.t){case"index":return e.s+"="+e.v;case"map":return e.s+".set("+e.k+","+e.v+")";case"set":return e.s+".add("+e.v+")";default:return ""}}function nr(e){let r=[],n=e[0],t=n,a;for(let o=1,i=e.length;o<i;o++){if(a=e[o],a.t===t.t)switch(a.t){case"index":a.v===t.v?n={t:"index",s:a.s,k:void 0,v:ne(n)}:(r.push(n),n=a);break;case"map":a.s===t.s?n={t:"map",s:ne(n),k:a.k,v:a.v}:(r.push(n),n=a);break;case"set":a.s===t.s?n={t:"set",s:ne(n),k:void 0,v:a.v}:(r.push(n),n=a);break;}else r.push(n),n=a;t=a;}return r.push(n),r}function Pe(e){if(e.length){let r="",n=nr(e);for(let t=0,a=n.length;t<a;t++)r+=ne(n[t])+",";return r}}function ze(e){return Pe(e.assignments)}function Be(e,r,n){e.assignments.push({t:"index",s:r,k:void 0,v:n});}function tr(e,r,n){R(e,r),e.assignments.push({t:"set",s:m(e,r),k:void 0,v:n});}function Se(e,r,n,t){R(e,r),e.assignments.push({t:"map",s:m(e,r),k:n,v:t});}function me(e,r,n,t){R(e,r),Be(e,m(e,r)+"["+n+"]",t);}function Te(e,r,n,t){R(e,r),Be(e,m(e,r)+"."+n,t);}function b(e,r,n){return e.markedRefs.has(r)?m(e,r)+"="+n:n}function k(e,r){return r.t===10&&e.stack.includes(r.i)}function ye(e,r){let n=r.l,t="",a,o=!1;for(let i=0;i<n;i++)i!==0&&(t+=","),a=r.a[i],a?k(e,a)?(me(e,r.i,i,m(e,a.i)),o=!0):(t+=y(e,a),o=!1):o=!0;return "["+t+(o?",]":"]")}function ar(e,r){e.stack.push(r.i);let n=ye(e,r);return e.stack.pop(),b(e,r.i,n)}function Ue(e,r,n){if(n.s===0)return "{}";let t="";e.stack.push(r);let a,o,i,d,s,u=!1;for(let l=0;l<n.s;l++)a=n.k[l],o=n.v[l],i=Number(a),d=i>=0||le(a),k(e,o)?(s=m(e,o.i),d&&Number.isNaN(i)?Te(e,r,a,s):me(e,r,d?a:'"'+A$2(a)+'"',s)):(t+=(u?",":"")+(d?a:'"'+A$2(a)+'"')+":"+y(e,o),u=!0);return e.stack.pop(),"{"+t+"}"}function or(e,r,n,t){let a=Ue(e,n,r);return a!=="{}"?"Object.assign("+t+","+a+")":t}function ir(e,r,n){e.stack.push(r);let t=[],a,o,i,d,s,u;for(let l=0;l<n.s;l++)a=e.stack,e.stack=[],o=y(e,n.v[l]),e.stack=a,i=n.k[l],d=Number(i),s=e.assignments,e.assignments=t,u=d>=0||le(i),u&&Number.isNaN(d)?Te(e,r,i,o):me(e,r,u?i:'"'+A$2(i)+'"',o),e.assignments=s;return e.stack.pop(),Pe(t)}function te(e,r,n,t){if(n)if(e.features&128)t=or(e,n,r,t);else {R(e,r);let a=ir(e,r,n);if(a)return "("+b(e,r,t)+","+a+m(e,r)+")"}return b(e,r,t)}function sr(e,r){return te(e,r.i,r.d,"Object.create(null)")}function lr(e,r){return b(e,r.i,Ue(e,r.i,r.d))}function dr(e,r){let n="new Set",t=r.l;if(t){let a="";e.stack.push(r.i);let o,i=!1;for(let d=0;d<t;d++)o=r.a[d],k(e,o)?tr(e,r.i,m(e,o.i)):(a+=(i?",":"")+y(e,o),i=!0);e.stack.pop(),a&&(n+="(["+a+"])");}return b(e,r.i,n)}function ur(e,r){let n="new Map";if(r.d.s){let t="";e.stack.push(r.i);let a,o,i,d,s,u=!1;for(let l=0;l<r.d.s;l++)a=r.d.k[l],o=r.d.v[l],k(e,a)?(i=m(e,a.i),k(e,o)?(d=m(e,o.i),Se(e,r.i,i,d)):(s=e.stack,e.stack=[],Se(e,r.i,i,y(e,o)),e.stack=s)):k(e,o)?(d=m(e,o.i),s=e.stack,e.stack=[],Se(e,r.i,y(e,a),d),e.stack=s):(t+=(u?",[":"[")+y(e,a)+","+y(e,o)+"]",u=!0);e.stack.pop(),t&&(n+="(["+t+"])");}return b(e,r.i,n)}function fr(e,r){e.stack.push(r.i);let n="new AggregateError("+ye(e,r)+',"'+A$2(r.m)+'")';return e.stack.pop(),te(e,r.i,r.d,n)}function cr(e,r){let n="new "+r.c+'("'+A$2(r.m)+'")';return te(e,r.i,r.d,n)}function Sr(e,r){let n;if(k(e,r.f)){let t=m(e,r.f.i);e.features&4?n="Promise.resolve().then(()=>"+t+")":n="Promise.resolve().then(function(){return "+t+"})";}else {e.stack.push(r.i);let t=y(e,r.f);e.stack.pop(),n="Promise.resolve("+t+")";}return b(e,r.i,n)}function mr(e,r){let n="",t=r.t===23;for(let o=0,i=r.s.length;o<i;o++)n+=(o!==0?",":"")+r.s[o]+(t?"n":"");let a="["+n+"]"+(r.l!==0?","+r.l:"");return b(e,r.i,"new "+r.c+"("+a+")")}function yr(e,r){let n=e.stack;e.stack=[];let t=ye(e,r);e.stack=n;let a=t;return e.features&2?a+=".values()":a+="[Symbol.iterator]()",e.features&4?a="{[Symbol.iterator]:()=>"+a+"}":e.features&64?a="{[Symbol.iterator](){return "+a+"}}":a="{[Symbol.iterator]:function(){return "+a+"}}",te(e,r.i,r.d,a)}function y(e,r){switch(r.t){case 0:return ""+r.s;case 1:return '"'+r.s+'"';case 2:return r.s?"!0":"!1";case 4:return "void 0";case 3:return "null";case 5:return "-0";case 6:return "1/0";case 7:return "-1/0";case 8:return "NaN";case 9:return r.s+"n";case 10:return m(e,r.i);case 15:return ar(e,r);case 16:return lr(e,r);case 17:return sr(e,r);case 11:return b(e,r.i,'new Date("'+r.s+'")');case 12:return b(e,r.i,"/"+r.c+"/"+r.m);case 13:return dr(e,r);case 14:return ur(e,r);case 23:case 22:return mr(e,r);case 20:return fr(e,r);case 19:return cr(e,r);case 21:return yr(e,r);case 18:return Sr(e,r);case 24:return Ie[r.s];default:throw new Error("Unsupported type")}}function Ne(e,r){let n=r.length,t=new Array(n),a=new Array(n),o;for(let i=0;i<n;i++)i in r&&(o=r[i],N(o)?a[i]=o:t[i]=g(e,o));for(let i=0;i<n;i++)i in a&&(t[i]=g(e,a[i]));return t}function Nr(e,r,n){return {t:15,i:r,s:void 0,l:n.length,c:void 0,m:void 0,d:void 0,a:Ne(e,n),f:void 0}}function pr(e,r,n){S(e.features&32,'Unsupported type "Map"');let t=n.size,a=new Array(t),o=new Array(t),i=new Array(t),d=new Array(t),s=0,u=0;for(let[l,f]of n.entries())N(l)||N(f)?(i[s]=l,d[s]=f,s++):(a[u]=g(e,l),o[u]=g(e,f),u++);for(let l=0;l<s;l++)a[u+l]=g(e,i[l]),o[u+l]=g(e,d[l]);return {t:14,i:r,s:void 0,l:void 0,c:void 0,m:void 0,d:{k:a,v:o,s:t},a:void 0,f:void 0}}function vr(e,r,n){S(e.features&512,'Unsupported type "Set"');let t=n.size,a=new Array(t),o=new Array(t),i=0,d=0;for(let s of n.keys())N(s)?o[i++]=s:a[d++]=g(e,s);for(let s=0;s<i;s++)a[d+s]=g(e,o[s]);return {t:13,i:r,s:void 0,l:t,c:void 0,m:void 0,d:void 0,a,f:void 0}}function oe(e,r){let n=Object.keys(r),t=n.length,a=new Array(t),o=new Array(t),i=new Array(t),d=new Array(t),s=0,u=0,l;for(let f of n)l=r[f],N(l)?(i[s]=f,d[s]=l,s++):(a[u]=f,o[u]=g(e,l),u++);for(let f=0;f<s;f++)a[u+f]=i[f],o[u+f]=g(e,d[f]);return {k:a,v:o,s:t}}function De(e,r,n){S(e.features&1024,'Unsupported type "Iterable"');let t=q(n),a=Array.from(n);return {t:21,i:r,s:void 0,l:a.length,c:void 0,m:void 0,d:t?oe(e,t):void 0,a:Ne(e,a),f:void 0}}function je(e,r,n,t){return Symbol.iterator in n?De(e,r,n):{t:t?17:16,i:r,s:void 0,l:void 0,c:void 0,m:void 0,d:oe(e,n),a:void 0,f:void 0}}function Me(e,r,n){let t=C(e,n),a=t?oe(e,t):void 0;return {t:20,i:r,s:void 0,l:n.errors.length,c:void 0,m:n.message,d:a,a:Ne(e,n.errors),f:void 0}}function ae(e,r,n){let t=C(e,n),a=t?oe(e,t):void 0;return {t:19,i:r,s:void 0,l:void 0,c:w(n),m:n.message,d:a,a:void 0,f:void 0}}function g(e,r){switch(typeof r){case"boolean":return r?T:U;case"undefined":return j;case"string":return K(r);case"number":switch(r){case 1/0:return _;case-1/0:return L;}return r!==r?x:Object.is(r,-0)?D:F(r);case"bigint":return W(e,r);case"object":{if(!r)return M;let n=z(e,r);if(e.markedRefs.has(n))return Y(n);if(Array.isArray(r))return Nr(e,n,r);switch(r.constructor){case Date:return Z(n,r);case RegExp:return G(n,r);case Int8Array:case Int16Array:case Int32Array:case Uint8Array:case Uint16Array:case Uint32Array:case Uint8ClampedArray:case Float32Array:case Float64Array:return H(e,n,r);case BigInt64Array:case BigUint64Array:return J(e,n,r);case Map:return pr(e,n,r);case Set:return vr(e,n,r);case Object:return je(e,n,r,!1);case void 0:return je(e,n,r,!0);case AggregateError:return e.features&1?Me(e,n,r):ae(e,n,r);case Error:case EvalError:case RangeError:case ReferenceError:case SyntaxError:case TypeError:case URIError:return ae(e,n,r);}if(r instanceof AggregateError)return e.features&1?Me(e,n,r):ae(e,n,r);if(r instanceof Error)return ae(e,n,r);if(Symbol.iterator in r)return De(e,n,r);throw new Error("Unsupported type")}case"symbol":return S(e.features&1024,'Unsupported type "symbol"'),S(r in O,"seroval only supports well-known symbols"),$(r);default:throw new Error("Unsupported type")}}function ie(e,r){let n=g(e,r),t=n.t===16||n.t===21;return [n,P(e,r),t]}function pe(e,r,n,t){if(e.vars.length){let a=ze(e),o=t;if(a){let d=m(e,r);o=t+","+a+d,t.startsWith(d+"=")||(o=d+"="+o);}let i=e.vars.length>1?e.vars.join(","):e.vars[0];return e.features&4?(i=e.vars.length>1||e.vars.length===0?"("+i+")":i,"("+i+"=>("+o+"))()"):"(function("+i+"){return "+o+"})()"}return n?"("+t+")":t}function gr(e,r){let n=h(r),[t,a,o]=ie(n,e),i=V(n),d=y(i,t);return pe(i,a,o,d)}
+var T=(o=>(o[o.AggregateError=1]="AggregateError",o[o.ArrowFunction=2]="ArrowFunction",o[o.ErrorPrototypeStack=4]="ErrorPrototypeStack",o[o.ObjectAssign=8]="ObjectAssign",o[o.BigIntTypedArray=16]="BigIntTypedArray",o))(T||{});function gr(n){switch(n){case'"':return '\\"';case"\\":return "\\\\";case`
+`:return "\\n";case"\r":return "\\r";case"\b":return "\\b";case"	":return "\\t";case"\f":return "\\f";case"<":return "\\x3C";case"\u2028":return "\\u2028";case"\u2029":return "\\u2029";default:return}}function d$1(n){let e="",r=0,t;for(let s=0,o=n.length;s<o;s++)t=gr(n[s]),t&&(e+=n.slice(r,s)+t,r=s+1);return r===0?e=n:e+=n.slice(r),e}var I$1="__SEROVAL_REFS__",G$1="$R",re=`self.${G$1}`;function hr(n){return n==null?`${re}=${re}||[]`:`(${re}=${re}||{})["${d$1(n)}"]=[]`}function f$1(n,e){if(!n)throw e}var Ve=new Map,R=new Map;function te$1(n){return Ve.has(n)}function Ue(n){return f$1(te$1(n),new ne(n)),Ve.get(n)}typeof globalThis!="undefined"?Object.defineProperty(globalThis,I$1,{value:R,configurable:!0,writable:!1,enumerable:!1}):typeof window!="undefined"?Object.defineProperty(window,I$1,{value:R,configurable:!0,writable:!1,enumerable:!1}):typeof self!="undefined"?Object.defineProperty(self,I$1,{value:R,configurable:!0,writable:!1,enumerable:!1}):typeof global!="undefined"&&Object.defineProperty(global,I$1,{value:R,configurable:!0,writable:!1,enumerable:!1});function Mr(n){return n}function Ke(n,e){for(let r=0,t=e.length;r<t;r++){let s=e[r];n.has(s)||(n.add(s),s.extends&&Ke(n,s.extends));}}function c(n){if(n){let e=new Set;return Ke(e,n),[...e]}}var Le={0:"Symbol.asyncIterator",1:"Symbol.hasInstance",2:"Symbol.isConcatSpreadable",3:"Symbol.iterator",4:"Symbol.match",5:"Symbol.matchAll",6:"Symbol.replace",7:"Symbol.search",8:"Symbol.species",9:"Symbol.split",10:"Symbol.toPrimitive",11:"Symbol.toStringTag",12:"Symbol.unscopables"},oe={[Symbol.asyncIterator]:0,[Symbol.hasInstance]:1,[Symbol.isConcatSpreadable]:2,[Symbol.iterator]:3,[Symbol.match]:4,[Symbol.matchAll]:5,[Symbol.replace]:6,[Symbol.search]:7,[Symbol.species]:8,[Symbol.split]:9,[Symbol.toPrimitive]:10,[Symbol.toStringTag]:11,[Symbol.unscopables]:12},Ye={2:"!0",3:"!1",1:"void 0",0:"null",4:"-0",5:"1/0",6:"-1/0",7:"0/0"};var ie={0:"Error",1:"EvalError",2:"RangeError",3:"ReferenceError",4:"SyntaxError",5:"TypeError",6:"URIError"};function v(n){return {t:2,i:void 0,s:n,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}var N=v(2),b=v(3),ae$1=v(1),le=v(0),qe=v(4),He=v(5),Ze=v(6),Xe=v(7);function ue(n){return n instanceof EvalError?1:n instanceof RangeError?2:n instanceof ReferenceError?3:n instanceof SyntaxError?4:n instanceof TypeError?5:n instanceof URIError?6:0}function Nr(n){let e=ie[ue(n)];return n.name!==e?{name:n.name}:n.constructor.name!==e?{name:n.constructor.name}:{}}function k(n,e){let r=Nr(n),t=Object.getOwnPropertyNames(n);for(let s=0,o=t.length,i;s<o;s++)i=t[s],i!=="name"&&i!=="message"&&(i==="stack"?e&4&&(r=r||{},r[i]=n[i]):(r=r||{},r[i]=n[i]));return r}function de(n){return Object.isFrozen(n)?3:Object.isSealed(n)?2:Object.isExtensible(n)?0:1}function ce(n){switch(n){case Number.POSITIVE_INFINITY:return He;case Number.NEGATIVE_INFINITY:return Ze}return n!==n?Xe:Object.is(n,-0)?qe:{t:0,i:void 0,s:n,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function x$1(n){return {t:1,i:void 0,s:d$1(n),l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function fe(n){return {t:3,i:void 0,s:""+n,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function er(n){return {t:4,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function pe(n,e){return {t:5,i:n,s:e.toISOString(),l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,f:void 0,a:void 0,b:void 0,o:void 0}}function me(n,e){return {t:6,i:n,s:void 0,l:void 0,c:d$1(e.source),m:e.flags,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function ge(n,e){let r=new Uint8Array(e),t=r.length,s=new Array(t);for(let o=0;o<t;o++)s[o]=r[o];return {t:19,i:n,s,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function rr(n,e){return {t:17,i:n,s:oe[e],l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function De(n,e){return {t:18,i:n,s:d$1(Ue(e)),l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function F$1(n,e,r){return {t:25,i:n,s:r,l:void 0,c:d$1(e),m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function Se(n,e,r){return {t:9,i:n,s:void 0,l:e.length,c:void 0,m:void 0,p:void 0,e:void 0,a:r,f:void 0,b:void 0,o:de(e)}}function he(n,e){return {t:21,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:e,b:void 0,o:void 0}}function ye(n,e,r){return {t:15,i:n,s:void 0,l:e.length,c:e.constructor.name,m:void 0,p:void 0,e:void 0,a:void 0,f:r,b:e.byteOffset,o:void 0}}function ve(n,e,r){return {t:16,i:n,s:void 0,l:e.length,c:e.constructor.name,m:void 0,p:void 0,e:void 0,a:void 0,f:r,b:e.byteOffset,o:void 0}}function Ne(n,e,r){return {t:20,i:n,s:void 0,l:e.byteLength,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:r,b:e.byteOffset,o:void 0}}function be(n,e,r){return {t:13,i:n,s:ue(e),l:void 0,c:void 0,m:d$1(e.message),p:r,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function xe(n,e,r){return {t:14,i:n,s:ue(e),l:void 0,c:void 0,m:d$1(e.message),p:r,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function Ae(n,e,r){return {t:7,i:n,s:void 0,l:e,c:void 0,m:void 0,p:void 0,e:void 0,a:r,f:void 0,b:void 0,o:void 0}}function V$1(n,e){return {t:28,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[n,e],f:void 0,b:void 0,o:void 0}}function D(n,e){return {t:30,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[n,e],f:void 0,b:void 0,o:void 0}}function B$1(n,e,r){return {t:31,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:r,f:e,b:void 0,o:void 0}}function Ie(n,e){return {t:32,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:e,b:void 0,o:void 0}}function Re(n,e){return {t:33,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:e,b:void 0,o:void 0}}function Ee(n,e){return {t:34,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:e,b:void 0,o:void 0}}var{toString:Be}=Object.prototype;function br(n,e){return e instanceof Error?`Seroval caught an error during the ${n} process.
+  
+${e.name}
+${e.message}
 
-const booleans = ["allowfullscreen", "async", "autofocus", "autoplay", "checked", "controls", "default", "disabled", "formnovalidate", "hidden", "indeterminate", "ismap", "loop", "multiple", "muted", "nomodule", "novalidate", "open", "playsinline", "readonly", "required", "reversed", "seamless", "selected"];
+- For more information, please check the "cause" property of this error.
+- If you believe this is an error in Seroval, please submit an issue at https://github.com/lxsmnsyc/seroval/issues/new`:`Seroval caught an error during the ${n} process.
+
+"${Be.call(e)}"
+
+For more information, please check the "cause" property of this error.`}var q$1=class q extends Error{constructor(r,t){super(br(r,t));this.cause=t;}},j=class extends q$1{constructor(e){super("parsing",e);}},we=class extends q$1{constructor(e){super("serialization",e);}},p$1=class p extends Error{constructor(r){super(`The value ${Be.call(r)} of type "${typeof r}" cannot be parsed/serialized.
+      
+There are few workarounds for this problem:
+- Transform the value in a way that it can be serialized.
+- If the reference is present on multiple runtimes (isomorphic), you can use the Reference API to map the references.`);this.value=r;}},m$1=class m extends Error{constructor(e){super('Unsupported node type "'+e.t+'".');}},_$1=class _ extends Error{constructor(e){super('Missing plugin for tag "'+e+'".');}},ne=class extends Error{constructor(r){super('Missing reference for the value "'+Be.call(r)+'" of type "'+typeof r+'"');this.value=r;}};var E$1=class E{constructor(e,r){this.value=e;this.replacement=r;}};var tr={},nr={};var sr={0:{},1:{},2:{},3:{},4:{}};function Ce(n){return "__SEROVAL_STREAM__"in n}function M$1(){let n=new Set,e=[],r=!0,t=!0;function s(a){for(let l of n.keys())l.next(a);}function o(a){for(let l of n.keys())l.throw(a);}function i(a){for(let l of n.keys())l.return(a);}return {__SEROVAL_STREAM__:!0,on(a){r&&n.add(a);for(let l=0,u=e.length;l<u;l++){let S=e[l];l===u-1&&!r?t?a.return(S):a.throw(S):a.next(S);}return ()=>{r&&n.delete(a);}},next(a){r&&(e.push(a),s(a));},throw(a){r&&(e.push(a),o(a),r=!1,t=!1,n.clear());},return(a){r&&(e.push(a),i(a),r=!1,t=!0,n.clear());}}}function ze(n){let e=M$1(),r=n[Symbol.asyncIterator]();async function t(){try{let s=await r.next();s.done?e.return(s.value):(e.next(s.value),await t());}catch(s){e.throw(s);}}return t().catch(()=>{}),e}function U(n){let e=[],r=-1,t=-1,s=n[Symbol.iterator]();for(;;)try{let o=s.next();if(e.push(o.value),o.done){t=e.length-1;break}}catch(o){r=e.length,e.push(o);}return {v:e,t:r,d:t}}var W=class{constructor(e){this.marked=new Set;this.plugins=e.plugins,this.features=31^(e.disabledFeatures||0),this.refs=e.refs||new Map;}markRef(e){this.marked.add(e);}isMarked(e){return this.marked.has(e)}getIndexedValue(e){let r=this.refs.get(e);if(r!=null)return this.markRef(r),{type:1,value:er(r)};let t=this.refs.size;return this.refs.set(e,t),{type:0,value:t}}getReference(e){let r=this.getIndexedValue(e);return r.type===1?r:te$1(e)?{type:2,value:De(r.value,e)}:r}getStrictReference(e){f$1(te$1(e),new p$1(e));let r=this.getIndexedValue(e);return r.type===1?r.value:De(r.value,e)}parseFunction(e){return this.getStrictReference(e)}parseWellKnownSymbol(e){let r=this.getReference(e);return r.type!==0?r.value:(f$1(e in oe,new p$1(e)),rr(r.value,e))}parseSpecialReference(e){let r=this.getIndexedValue(sr[e]);return r.type===1?r.value:{t:26,i:r.value,s:e,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}parseIteratorFactory(){let e=this.getIndexedValue(tr);return e.type===1?e.value:{t:27,i:e.value,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:this.parseWellKnownSymbol(Symbol.iterator),b:void 0,o:void 0}}parseAsyncIteratorFactory(){let e=this.getIndexedValue(nr);return e.type===1?e.value:{t:29,i:e.value,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[this.parseSpecialReference(1),this.parseWellKnownSymbol(Symbol.asyncIterator)],f:void 0,b:void 0,o:void 0}}createObjectNode(e,r,t,s){return {t:t?11:10,i:e,s:void 0,l:void 0,c:void 0,m:void 0,p:s,e:void 0,a:void 0,f:void 0,b:void 0,o:de(r)}}createMapNode(e,r,t,s){return {t:8,i:e,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:{k:r,v:t,s},a:void 0,f:this.parseSpecialReference(0),b:void 0,o:void 0}}createPromiseConstructorNode(e){return {t:22,i:e,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:this.parseSpecialReference(1),b:void 0,o:void 0}}};var Ar=/^[$A-Z_][0-9A-Z_$]*$/i;function _e(n){let e=n[0];return (e==="$"||e==="_"||e>="A"&&e<="Z"||e>="a"&&e<="z")&&Ar.test(n)}function X$1(n){switch(n.t){case 0:return n.s+"="+n.v;case 2:return n.s+".set("+n.k+","+n.v+")";case 1:return n.s+".add("+n.v+")";case 3:return n.s+".delete("+n.k+")"}}function Ir(n){let e=[],r=n[0];for(let t=1,s=n.length,o,i=r;t<s;t++)o=n[t],o.t===0&&o.v===i.v?r={t:0,s:o.s,k:void 0,v:X$1(r)}:o.t===2&&o.s===i.s?r={t:2,s:X$1(r),k:o.k,v:o.v}:o.t===1&&o.s===i.s?r={t:1,s:X$1(r),k:void 0,v:o.v}:o.t===3&&o.s===i.s?r={t:3,s:X$1(r),k:o.k,v:void 0}:(e.push(r),r=o),i=o;return e.push(r),e}function ur(n){if(n.length){let e="",r=Ir(n);for(let t=0,s=r.length;t<s;t++)e+=X$1(r[t])+",";return e}}var Rr="Object.create(null)",Er="new Set",wr="new Map",Pr="Promise.resolve",Or="Promise.reject",Cr={3:"Object.freeze",2:"Object.seal",1:"Object.preventExtensions",0:void 0},O$1=class O{constructor(e){this.stack=[];this.flags=[];this.assignments=[];this.plugins=e.plugins,this.features=e.features,this.marked=new Set(e.markedRefs);}createFunction(e,r){return this.features&2?(e.length===1?e[0]:"("+e.join(",")+")")+"=>"+(r.startsWith("{")?"("+r+")":r):"function("+e.join(",")+"){return "+r+"}"}createEffectfulFunction(e,r){return this.features&2?(e.length===1?e[0]:"("+e.join(",")+")")+"=>{"+r+"}":"function("+e.join(",")+"){"+r+"}"}markRef(e){this.marked.add(e);}isMarked(e){return this.marked.has(e)}pushObjectFlag(e,r){e!==0&&(this.markRef(r),this.flags.push({type:e,value:this.getRefParam(r)}));}resolveFlags(){let e="";for(let r=0,t=this.flags,s=t.length;r<s;r++){let o=t[r];e+=Cr[o.type]+"("+o.value+"),";}return e}resolvePatches(){let e=ur(this.assignments),r=this.resolveFlags();return e?r?e+r:e:r}createAssignment(e,r){this.assignments.push({t:0,s:e,k:void 0,v:r});}createAddAssignment(e,r){this.assignments.push({t:1,s:this.getRefParam(e),k:void 0,v:r});}createSetAssignment(e,r,t){this.assignments.push({t:2,s:this.getRefParam(e),k:r,v:t});}createDeleteAssignment(e,r){this.assignments.push({t:3,s:this.getRefParam(e),k:r,v:void 0});}createArrayAssign(e,r,t){this.createAssignment(this.getRefParam(e)+"["+r+"]",t);}createObjectAssign(e,r,t){this.createAssignment(this.getRefParam(e)+"."+r,t);}isIndexedValueInStack(e){return e.t===4&&this.stack.includes(e.i)}serializeReference(e){return this.assignIndexedValue(e.i,I$1+'.get("'+e.s+'")')}serializeArrayItem(e,r,t){return r?this.isIndexedValueInStack(r)?(this.markRef(e),this.createArrayAssign(e,t,this.getRefParam(r.i)),""):this.serialize(r):""}serializeArray(e){let r=e.i;if(e.l){this.stack.push(r);let t=e.a,s=this.serializeArrayItem(r,t[0],0),o=s==="";for(let i=1,a=e.l,l;i<a;i++)l=this.serializeArrayItem(r,t[i],i),s+=","+l,o=l==="";return this.stack.pop(),this.pushObjectFlag(e.o,e.i),this.assignIndexedValue(r,"["+s+(o?",]":"]"))}return this.assignIndexedValue(r,"[]")}serializeProperty(e,r,t){if(typeof r=="string"){let s=Number(r),o=s>=0&&s.toString()===r||_e(r);if(this.isIndexedValueInStack(t)){let i=this.getRefParam(t.i);return this.markRef(e.i),o&&s!==s?this.createObjectAssign(e.i,r,i):this.createArrayAssign(e.i,o?r:'"'+r+'"',i),""}return (o?r:'"'+r+'"')+":"+this.serialize(t)}return "["+this.serialize(r)+"]:"+this.serialize(t)}serializeProperties(e,r){let t=r.s;if(t){let s=r.k,o=r.v;this.stack.push(e.i);let i=this.serializeProperty(e,s[0],o[0]);for(let a=1,l=i;a<t;a++)l=this.serializeProperty(e,s[a],o[a]),i+=(l&&i&&",")+l;return this.stack.pop(),"{"+i+"}"}return "{}"}serializeObject(e){return this.pushObjectFlag(e.o,e.i),this.assignIndexedValue(e.i,this.serializeProperties(e,e.p))}serializeWithObjectAssign(e,r,t){let s=this.serializeProperties(e,r);return s!=="{}"?"Object.assign("+t+","+s+")":t}serializeStringKeyAssignment(e,r,t,s){let o=this.serialize(s),i=Number(t),a=i>=0&&i.toString()===t||_e(t);if(this.isIndexedValueInStack(s))a&&i!==i?this.createObjectAssign(e.i,t,o):this.createArrayAssign(e.i,a?t:'"'+t+'"',o);else {let l=this.assignments;this.assignments=r,a&&i!==i?this.createObjectAssign(e.i,t,o):this.createArrayAssign(e.i,a?t:'"'+t+'"',o),this.assignments=l;}}serializeAssignment(e,r,t,s){if(typeof t=="string")this.serializeStringKeyAssignment(e,r,t,s);else {let o=this.stack;this.stack=[];let i=this.serialize(s);this.stack=o;let a=this.assignments;this.assignments=r,this.createArrayAssign(e.i,this.serialize(t),i),this.assignments=a;}}serializeAssignments(e,r){let t=r.s;if(t){let s=[],o=r.k,i=r.v;this.stack.push(e.i);for(let a=0;a<t;a++)this.serializeAssignment(e,s,o[a],i[a]);return this.stack.pop(),ur(s)}}serializeDictionary(e,r){if(e.p)if(this.features&8)r=this.serializeWithObjectAssign(e,e.p,r);else {this.markRef(e.i);let t=this.serializeAssignments(e,e.p);if(t)return "("+this.assignIndexedValue(e.i,r)+","+t+this.getRefParam(e.i)+")"}return this.assignIndexedValue(e.i,r)}serializeNullConstructor(e){return this.pushObjectFlag(e.o,e.i),this.serializeDictionary(e,Rr)}serializeDate(e){return this.assignIndexedValue(e.i,'new Date("'+e.s+'")')}serializeRegExp(e){return this.assignIndexedValue(e.i,"/"+e.c+"/"+e.m)}serializeSetItem(e,r){return this.isIndexedValueInStack(r)?(this.markRef(e),this.createAddAssignment(e,this.getRefParam(r.i)),""):this.serialize(r)}serializeSet(e){let r=Er,t=e.l,s=e.i;if(t){let o=e.a;this.stack.push(s);let i=this.serializeSetItem(s,o[0]);for(let a=1,l=i;a<t;a++)l=this.serializeSetItem(s,o[a]),i+=(l&&i&&",")+l;this.stack.pop(),i&&(r+="(["+i+"])");}return this.assignIndexedValue(s,r)}serializeMapEntry(e,r,t,s){if(this.isIndexedValueInStack(r)){let o=this.getRefParam(r.i);if(this.markRef(e),this.isIndexedValueInStack(t)){let a=this.getRefParam(t.i);return this.createSetAssignment(e,o,a),""}if(t.t!==4&&t.i!=null&&this.isMarked(t.i)){let a="("+this.serialize(t)+",["+s+","+s+"])";return this.createSetAssignment(e,o,this.getRefParam(t.i)),this.createDeleteAssignment(e,s),a}let i=this.stack;return this.stack=[],this.createSetAssignment(e,o,this.serialize(t)),this.stack=i,""}if(this.isIndexedValueInStack(t)){let o=this.getRefParam(t.i);if(this.markRef(e),r.t!==4&&r.i!=null&&this.isMarked(r.i)){let a="("+this.serialize(r)+",["+s+","+s+"])";return this.createSetAssignment(e,this.getRefParam(r.i),o),this.createDeleteAssignment(e,s),a}let i=this.stack;return this.stack=[],this.createSetAssignment(e,this.serialize(r),o),this.stack=i,""}return "["+this.serialize(r)+","+this.serialize(t)+"]"}serializeMap(e){let r=wr,t=e.e.s,s=e.i,o=e.f,i=this.getRefParam(o.i);if(t){let a=e.e.k,l=e.e.v;this.stack.push(s);let u=this.serializeMapEntry(s,a[0],l[0],i);for(let S=1,Fe=u;S<t;S++)Fe=this.serializeMapEntry(s,a[S],l[S],i),u+=(Fe&&u&&",")+Fe;this.stack.pop(),u&&(r+="(["+u+"])");}return o.t===26&&(this.markRef(o.i),r="("+this.serialize(o)+","+r+")"),this.assignIndexedValue(s,r)}serializeArrayBuffer(e){let r="new Uint8Array(",t=e.s,s=t.length;if(s){r+="["+t[0];for(let o=1;o<s;o++)r+=","+t[o];r+="]";}return this.assignIndexedValue(e.i,r+").buffer")}serializeTypedArray(e){return this.assignIndexedValue(e.i,"new "+e.c+"("+this.serialize(e.f)+","+e.b+","+e.l+")")}serializeDataView(e){return this.assignIndexedValue(e.i,"new DataView("+this.serialize(e.f)+","+e.b+","+e.l+")")}serializeAggregateError(e){let r=e.i;this.stack.push(r);let t=this.serializeDictionary(e,'new AggregateError([],"'+e.m+'")');return this.stack.pop(),t}serializeError(e){return this.serializeDictionary(e,"new "+ie[e.s]+'("'+e.m+'")')}serializePromise(e){let r,t=e.f,s=e.i,o=e.s?Pr:Or;if(this.isIndexedValueInStack(t)){let i=this.getRefParam(t.i);r=o+(e.s?"().then("+this.createFunction([],i)+")":"().catch("+this.createEffectfulFunction([],"throw "+i)+")");}else {this.stack.push(s);let i=this.serialize(t);this.stack.pop(),r=o+"("+i+")";}return this.assignIndexedValue(s,r)}serializeWellKnownSymbol(e){return this.assignIndexedValue(e.i,Le[e.s])}serializeBoxed(e){return this.assignIndexedValue(e.i,"Object("+this.serialize(e.f)+")")}serializePlugin(e){let r=this.plugins;if(r)for(let t=0,s=r.length;t<s;t++){let o=r[t];if(o.tag===e.c)return this.assignIndexedValue(e.i,o.serialize(e.s,this,{id:e.i}))}throw new _$1(e.c)}getConstructor(e){let r=this.serialize(e);return r===this.getRefParam(e.i)?r:"("+r+")"}serializePromiseConstructor(e){return this.assignIndexedValue(e.i,this.getConstructor(e.f)+"()")}serializePromiseResolve(e){return this.getConstructor(e.a[0])+"("+this.getRefParam(e.i)+","+this.serialize(e.a[1])+")"}serializePromiseReject(e){return this.getConstructor(e.a[0])+"("+this.getRefParam(e.i)+","+this.serialize(e.a[1])+")"}serializeSpecialReferenceValue(e){switch(e){case 0:return "[]";case 1:return this.createFunction(["s","f","p"],"((p=new Promise("+this.createEffectfulFunction(["a","b"],"s=a,f=b")+")).s=s,p.f=f,p)");case 2:return this.createEffectfulFunction(["p","d"],'p.s(d),p.status="success",p.value=d;delete p.s;delete p.f');case 3:return this.createEffectfulFunction(["p","d"],'p.f(d),p.status="failure",p.value=d;delete p.s;delete p.f');case 4:return this.createFunction(["b","a","s","l","p","f","e","n"],"(b=[],a=!0,s=!1,l=[],p=0,f="+this.createEffectfulFunction(["v","m","x"],"for(x=0;x<p;x++)l[x]&&l[x][m](v)")+",n="+this.createEffectfulFunction(["o","x","z","c"],'for(x=0,z=b.length;x<z;x++)(c=b[x],(!a&&x===z-1)?o[s?"return":"throw"](c):o.next(c))')+",e="+this.createFunction(["o","t"],"(a&&(l[t=p++]=o),n(o),"+this.createEffectfulFunction([],"a&&(l[t]=void 0)")+")")+",{__SEROVAL_STREAM__:!0,on:"+this.createFunction(["o"],"e(o)")+",next:"+this.createEffectfulFunction(["v"],'a&&(b.push(v),f(v,"next"))')+",throw:"+this.createEffectfulFunction(["v"],'a&&(b.push(v),f(v,"throw"),a=s=!1,l.length=0)')+",return:"+this.createEffectfulFunction(["v"],'a&&(b.push(v),f(v,"return"),a=!1,s=!0,l.length=0)')+"})");default:return ""}}serializeSpecialReference(e){return this.assignIndexedValue(e.i,this.serializeSpecialReferenceValue(e.s))}serializeIteratorFactory(e){let r="",t=!1;return e.f.t!==4&&(this.markRef(e.f.i),r="("+this.serialize(e.f)+",",t=!0),r+=this.assignIndexedValue(e.i,this.createFunction(["s"],this.createFunction(["i","c","d","t"],"(i=0,t={["+this.getRefParam(e.f.i)+"]:"+this.createFunction([],"t")+",next:"+this.createEffectfulFunction([],"if(i>s.d)return{done:!0,value:void 0};if(d=s.v[c=i++],c===s.t)throw d;return{done:c===s.d,value:d}")+"})"))),t&&(r+=")"),r}serializeIteratorFactoryInstance(e){return this.getConstructor(e.a[0])+"("+this.serialize(e.a[1])+")"}serializeAsyncIteratorFactory(e){let r=e.a[0],t=e.a[1],s="";r.t!==4&&(this.markRef(r.i),s+="("+this.serialize(r)),t.t!==4&&(this.markRef(t.i),s+=(s?",":"(")+this.serialize(t)),s&&(s+=",");let o=this.assignIndexedValue(e.i,this.createFunction(["s"],this.createFunction(["b","c","p","d","e","t","f"],"(b=[],c=0,p=[],d=-1,e=!1,f="+this.createEffectfulFunction(["i","l"],"for(i=0,l=p.length;i<l;i++)p[i].s({done:!0,value:void 0})")+",s.on({next:"+this.createEffectfulFunction(["v","t"],"if(t=p.shift())t.s({done:!1,value:v});b.push(v)")+",throw:"+this.createEffectfulFunction(["v","t"],"if(t=p.shift())t.f(v);f(),d=b.length,e=!0,b.push(v)")+",return:"+this.createEffectfulFunction(["v","t"],"if(t=p.shift())t.s({done:!0,value:v});f(),d=b.length,b.push(v)")+"}),t={["+this.getRefParam(t.i)+"]:"+this.createFunction([],"t")+",next:"+this.createEffectfulFunction(["i","t","v"],"if(d===-1){return((i=c++)>=b.length)?(p.push(t="+this.getRefParam(r.i)+"()),t):{done:!1,value:b[i]}}if(c>d)return{done:!0,value:void 0};if(v=b[i=c++],i!==d)return{done:!1,value:v};if(e)throw v;return{done:!0,value:v}")+"})")));return s?s+o+")":o}serializeAsyncIteratorFactoryInstance(e){return this.getConstructor(e.a[0])+"("+this.serialize(e.a[1])+")"}serializeStreamConstructor(e){let r=this.assignIndexedValue(e.i,this.getConstructor(e.f)+"()"),t=e.a.length;if(t){let s=this.serialize(e.a[0]);for(let o=1;o<t;o++)s+=","+this.serialize(e.a[o]);return "("+r+","+s+","+this.getRefParam(e.i)+")"}return r}serializeStreamNext(e){return this.getRefParam(e.i)+".next("+this.serialize(e.f)+")"}serializeStreamThrow(e){return this.getRefParam(e.i)+".throw("+this.serialize(e.f)+")"}serializeStreamReturn(e){return this.getRefParam(e.i)+".return("+this.serialize(e.f)+")"}serialize(e){try{switch(e.t){case 2:return Ye[e.s];case 0:return ""+e.s;case 1:return '"'+e.s+'"';case 3:return e.s+"n";case 4:return this.getRefParam(e.i);case 18:return this.serializeReference(e);case 9:return this.serializeArray(e);case 10:return this.serializeObject(e);case 11:return this.serializeNullConstructor(e);case 5:return this.serializeDate(e);case 6:return this.serializeRegExp(e);case 7:return this.serializeSet(e);case 8:return this.serializeMap(e);case 19:return this.serializeArrayBuffer(e);case 16:case 15:return this.serializeTypedArray(e);case 20:return this.serializeDataView(e);case 14:return this.serializeAggregateError(e);case 13:return this.serializeError(e);case 12:return this.serializePromise(e);case 17:return this.serializeWellKnownSymbol(e);case 21:return this.serializeBoxed(e);case 22:return this.serializePromiseConstructor(e);case 23:return this.serializePromiseResolve(e);case 24:return this.serializePromiseReject(e);case 25:return this.serializePlugin(e);case 26:return this.serializeSpecialReference(e);case 27:return this.serializeIteratorFactory(e);case 28:return this.serializeIteratorFactoryInstance(e);case 29:return this.serializeAsyncIteratorFactory(e);case 30:return this.serializeAsyncIteratorFactoryInstance(e);case 31:return this.serializeStreamConstructor(e);case 32:return this.serializeStreamNext(e);case 33:return this.serializeStreamThrow(e);case 34:return this.serializeStreamReturn(e);default:throw new m$1(e)}}catch(r){throw new we(r)}}};var C=class extends O$1{constructor(r){super(r);this.mode="cross";this.scopeId=r.scopeId;}getRefParam(r){return G$1+"["+r+"]"}assignIndexedValue(r,t){return this.getRefParam(r)+"="+t}serializeTop(r){let t=this.serialize(r),s=r.i;if(s==null)return t;let o=this.resolvePatches(),i=this.getRefParam(s),a=this.scopeId==null?"":G$1,l=o?"("+t+","+o+i+")":t;if(a==="")return r.t===10&&!o?"("+l+")":l;let u=this.scopeId==null?"()":"("+G$1+'["'+d$1(this.scopeId)+'"])';return "("+this.createFunction([a],l)+")"+u}};var g$1=class g extends W{parseItems(e){let r=[];for(let t=0,s=e.length;t<s;t++)t in e&&(r[t]=this.parse(e[t]));return r}parseArray(e,r){return Se(e,r,this.parseItems(r))}parseProperties(e){let r=Object.entries(e),t=[],s=[];for(let i=0,a=r.length;i<a;i++)t.push(d$1(r[i][0])),s.push(this.parse(r[i][1]));let o=Symbol.iterator;return o in e&&(t.push(this.parseWellKnownSymbol(o)),s.push(V$1(this.parseIteratorFactory(),this.parse(U(e))))),o=Symbol.asyncIterator,o in e&&(t.push(this.parseWellKnownSymbol(o)),s.push(D(this.parseAsyncIteratorFactory(),this.parse(M$1())))),o=Symbol.toStringTag,o in e&&(t.push(this.parseWellKnownSymbol(o)),s.push(x$1(e[o]))),o=Symbol.isConcatSpreadable,o in e&&(t.push(this.parseWellKnownSymbol(o)),s.push(e[o]?N:b)),{k:t,v:s,s:t.length}}parsePlainObject(e,r,t){return this.createObjectNode(e,r,t,this.parseProperties(r))}parseBoxed(e,r){return he(e,this.parse(r.valueOf()))}parseTypedArray(e,r){return ye(e,r,this.parse(r.buffer))}parseBigIntTypedArray(e,r){return ve(e,r,this.parse(r.buffer))}parseDataView(e,r){return Ne(e,r,this.parse(r.buffer))}parseError(e,r){let t=k(r,this.features);return be(e,r,t?this.parseProperties(t):void 0)}parseAggregateError(e,r){let t=k(r,this.features);return xe(e,r,t?this.parseProperties(t):void 0)}parseMap(e,r){let t=[],s=[];for(let[o,i]of r.entries())t.push(this.parse(o)),s.push(this.parse(i));return this.createMapNode(e,t,s,r.size)}parseSet(e,r){let t=[];for(let s of r.keys())t.push(this.parse(s));return Ae(e,r.size,t)}parsePlugin(e,r){let t=this.plugins;if(t)for(let s=0,o=t.length;s<o;s++){let i=t[s];if(i.parse.sync&&i.test(r))return F$1(e,i.tag,i.parse.sync(r,this,{id:e}))}}parseStream(e,r){return B$1(e,this.parseSpecialReference(4),[])}parsePromise(e,r){return this.createPromiseConstructorNode(e)}parseObject(e,r){if(Array.isArray(r))return this.parseArray(e,r);if(Ce(r))return this.parseStream(e,r);let t=r.constructor;if(t===E$1)return this.parse(r.replacement);let s=this.parsePlugin(e,r);if(s)return s;switch(t){case Object:return this.parsePlainObject(e,r,!1);case void 0:return this.parsePlainObject(e,r,!0);case Date:return pe(e,r);case RegExp:return me(e,r);case Error:case EvalError:case RangeError:case ReferenceError:case SyntaxError:case TypeError:case URIError:return this.parseError(e,r);case Number:case Boolean:case String:case BigInt:return this.parseBoxed(e,r);case ArrayBuffer:return ge(e,r);case Int8Array:case Int16Array:case Int32Array:case Uint8Array:case Uint16Array:case Uint32Array:case Uint8ClampedArray:case Float32Array:case Float64Array:return this.parseTypedArray(e,r);case DataView:return this.parseDataView(e,r);case Map:return this.parseMap(e,r);case Set:return this.parseSet(e,r);}if(t===Promise||r instanceof Promise)return this.parsePromise(e,r);let o=this.features;if(o&16)switch(t){case BigInt64Array:case BigUint64Array:return this.parseBigIntTypedArray(e,r);}if(o&1&&typeof AggregateError!="undefined"&&(t===AggregateError||r instanceof AggregateError))return this.parseAggregateError(e,r);if(r instanceof Error)return this.parseError(e,r);if(Symbol.iterator in r||Symbol.asyncIterator in r)return this.parsePlainObject(e,r,!!t);throw new p$1(r)}parse(e){try{switch(typeof e){case"boolean":return e?N:b;case"undefined":return ae$1;case"string":return x$1(e);case"number":return ce(e);case"bigint":return fe(e);case"object":{if(e){let r=this.getReference(e);return r.type===0?this.parseObject(r.value,e):r.value}return le}case"symbol":return this.parseWellKnownSymbol(e);case"function":return this.parseFunction(e);default:throw new p$1(e)}}catch(r){throw new j(r)}}};var Q$1=class Q extends g$1{constructor(r){super(r);this.alive=!0;this.pending=0;this.initial=!0;this.buffer=[];this.onParseCallback=r.onParse,this.onErrorCallback=r.onError,this.onDoneCallback=r.onDone;}onParseInternal(r,t){try{this.onParseCallback(r,t);}catch(s){this.onError(s);}}flush(){for(let r=0,t=this.buffer.length;r<t;r++)this.onParseInternal(this.buffer[r],!1);}onParse(r){this.initial?this.buffer.push(r):this.onParseInternal(r,!1);}onError(r){if(this.onErrorCallback)this.onErrorCallback(r);else throw r}onDone(){this.onDoneCallback&&this.onDoneCallback();}pushPendingState(){this.pending++;}popPendingState(){--this.pending<=0&&this.onDone();}parseProperties(r){let t=Object.entries(r),s=[],o=[];for(let a=0,l=t.length;a<l;a++)s.push(d$1(t[a][0])),o.push(this.parse(t[a][1]));let i=Symbol.iterator;return i in r&&(s.push(this.parseWellKnownSymbol(i)),o.push(V$1(this.parseIteratorFactory(),this.parse(U(r))))),i=Symbol.asyncIterator,i in r&&(s.push(this.parseWellKnownSymbol(i)),o.push(D(this.parseAsyncIteratorFactory(),this.parse(ze(r))))),i=Symbol.toStringTag,i in r&&(s.push(this.parseWellKnownSymbol(i)),o.push(x$1(r[i]))),i=Symbol.isConcatSpreadable,i in r&&(s.push(this.parseWellKnownSymbol(i)),o.push(r[i]?N:b)),{k:s,v:o,s:s.length}}parsePromise(r,t){return t.then(s=>{let o=this.parseWithError(s);o&&this.onParse({t:23,i:r,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[this.parseSpecialReference(2),o],f:void 0,b:void 0,o:void 0}),this.popPendingState();},s=>{if(this.alive){let o=this.parseWithError(s);o&&this.onParse({t:24,i:r,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[this.parseSpecialReference(3),o],f:void 0,b:void 0,o:void 0});}this.popPendingState();}),this.pushPendingState(),this.createPromiseConstructorNode(r)}parsePlugin(r,t){let s=this.plugins;if(s)for(let o=0,i=s.length;o<i;o++){let a=s[o];if(a.parse.stream&&a.test(t))return F$1(r,a.tag,a.parse.stream(t,this,{id:r}))}}parseStream(r,t){let s=B$1(r,this.parseSpecialReference(4),[]);return this.pushPendingState(),t.on({next:o=>{if(this.alive){let i=this.parseWithError(o);i&&this.onParse(Ie(r,i));}},throw:o=>{if(this.alive){let i=this.parseWithError(o);i&&this.onParse(Re(r,i));}this.popPendingState();},return:o=>{if(this.alive){let i=this.parseWithError(o);i&&this.onParse(Ee(r,i));}this.popPendingState();}}),s}parseWithError(r){try{return this.parse(r)}catch(t){this.onError(t);return}}start(r){let t=this.parseWithError(r);t&&(this.onParseInternal(t,!0),this.initial=!1,this.flush(),this.pending<=0&&this.destroy());}destroy(){this.alive&&(this.onDone(),this.alive=!1);}isAlive(){return this.alive}};var L$1=class L extends Q$1{constructor(){super(...arguments);this.mode="cross";}};function dr(n,e){let r=c(e.plugins),t=new L$1({plugins:r,refs:e.refs,disabledFeatures:e.disabledFeatures,onParse(s,o){let i=new C({plugins:r,features:t.features,scopeId:e.scopeId,markedRefs:t.marked}),a;try{a=i.serializeTop(s);}catch(l){e.onError&&e.onError(l);return}e.onSerialize(a,o);},onError:e.onError,onDone:e.onDone});return t.start(n),()=>{t.destroy();}}var ke=class{constructor(e){this.options=e;this.alive=!0;this.flushed=!1;this.done=!1;this.pending=0;this.cleanups=[];this.refs=new Map;this.keys=new Set;this.ids=0;this.plugins=c(e.plugins);}write(e,r){this.alive&&!this.flushed&&(this.pending++,this.keys.add(e),this.cleanups.push(dr(r,{plugins:this.plugins,scopeId:this.options.scopeId,refs:this.refs,disabledFeatures:this.options.disabledFeatures,onError:this.options.onError,onSerialize:(t,s)=>{this.alive&&this.options.onData(s?this.options.globalIdentifier+'["'+d$1(e)+'"]='+t:t);},onDone:()=>{this.alive&&(this.pending--,this.pending<=0&&this.flushed&&!this.done&&this.options.onDone&&(this.options.onDone(),this.done=!0));}})));}getNextID(){for(;this.keys.has(""+this.ids);)this.ids++;return ""+this.ids}push(e){let r=this.getNextID();return this.write(r,e),r}flush(){this.alive&&(this.flushed=!0,this.pending<=0&&!this.done&&this.options.onDone&&(this.options.onDone(),this.done=!0));}close(){if(this.alive){for(let e=0,r=this.cleanups.length;e<r;e++)this.cleanups[e]();!this.done&&this.options.onDone&&(this.options.onDone(),this.done=!0),this.alive=!1;}}};
+
+function p(e){return {detail:e.detail,bubbles:e.bubbles,cancelable:e.cancelable,composed:e.composed}}var E=Mr({tag:"seroval-plugins/web/CustomEvent",test(e){return typeof CustomEvent=="undefined"?!1:e instanceof CustomEvent},parse:{sync(e,r){return {type:r.parse(e.type),options:r.parse(p(e))}},async async(e,r){return {type:await r.parse(e.type),options:await r.parse(p(e))}},stream(e,r){return {type:r.parse(e.type),options:r.parse(p(e))}}},serialize(e,r){return "new CustomEvent("+r.serialize(e.type)+","+r.serialize(e.options)+")"},deserialize(e,r){return new CustomEvent(r.deserialize(e.type),r.deserialize(e.options))}}),F=E;var I=Mr({tag:"seroval-plugins/web/DOMException",test(e){return typeof DOMException=="undefined"?!1:e instanceof DOMException},parse:{sync(e,r){return {name:r.parse(e.name),message:r.parse(e.message)}},async async(e,r){return {name:await r.parse(e.name),message:await r.parse(e.message)}},stream(e,r){return {name:r.parse(e.name),message:r.parse(e.message)}}},serialize(e,r){return "new DOMException("+r.serialize(e.message)+","+r.serialize(e.name)+")"},deserialize(e,r){return new DOMException(r.deserialize(e.message),r.deserialize(e.name))}}),B=I;function u(e){return {bubbles:e.bubbles,cancelable:e.cancelable,composed:e.composed}}var L=Mr({tag:"seroval-plugins/web/Event",test(e){return typeof Event=="undefined"?!1:e instanceof Event},parse:{sync(e,r){return {type:r.parse(e.type),options:r.parse(u(e))}},async async(e,r){return {type:await r.parse(e.type),options:await r.parse(u(e))}},stream(e,r){return {type:r.parse(e.type),options:r.parse(u(e))}}},serialize(e,r){return "new Event("+r.serialize(e.type)+","+r.serialize(e.options)+")"},deserialize(e,r){return new Event(r.deserialize(e.type),r.deserialize(e.options))}}),O=L;var q=Mr({tag:"seroval-plugins/web/File",test(e){return typeof File=="undefined"?!1:e instanceof File},parse:{async async(e,r){return {name:await r.parse(e.name),options:await r.parse({type:e.type,lastModified:e.lastModified}),buffer:await r.parse(await e.arrayBuffer())}}},serialize(e,r){return "new File(["+r.serialize(e.buffer)+"],"+r.serialize(e.name)+","+r.serialize(e.options)+")"},deserialize(e,r){return new File([r.deserialize(e.buffer)],r.deserialize(e.name),r.deserialize(e.options))}}),d=q;function f(e){let r=[];return e.forEach((s,a)=>{r.push([a,s]);}),r}var n={},H=Mr({tag:"seroval-plugins/web/FormDataFactory",test(e){return e===n},parse:{sync(){},async async(){return await Promise.resolve(void 0)},stream(){}},serialize(e,r){return r.createEffectfulFunction(["e","f","i","s","t"],"f=new FormData;for(i=0,s=e.length;i<s;i++)f.append((t=e[i])[0],t[1]);return f")},deserialize(){return n}}),M=Mr({tag:"seroval-plugins/web/FormData",extends:[d,H],test(e){return typeof FormData=="undefined"?!1:e instanceof FormData},parse:{sync(e,r){return {factory:r.parse(n),entries:r.parse(f(e))}},async async(e,r){return {factory:await r.parse(n),entries:await r.parse(f(e))}},stream(e,r){return {factory:r.parse(n),entries:r.parse(f(e))}}},serialize(e,r){return "("+r.serialize(e.factory)+")("+r.serialize(e.entries)+")"},deserialize(e,r){let s=new FormData,a=r.deserialize(e.entries);for(let t=0,b=a.length;t<b;t++){let c=a[t];s.append(c[0],c[1]);}return s}}),A=M;function m(e){let r=[];return e.forEach((s,a)=>{r.push([a,s]);}),r}var _=Mr({tag:"seroval-plugins/web/Headers",test(e){return typeof Headers=="undefined"?!1:e instanceof Headers},parse:{sync(e,r){return r.parse(m(e))},async async(e,r){return await r.parse(m(e))},stream(e,r){return r.parse(m(e))}},serialize(e,r){return "new Headers("+r.serialize(e)+")"},deserialize(e,r){return new Headers(r.deserialize(e))}}),i=_;var o={},V=Mr({tag:"seroval-plugins/web/ReadableStreamFactory",test(e){return e===o},parse:{sync(){},async async(){return await Promise.resolve(void 0)},stream(){}},serialize(e,r){return r.createFunction(["d"],"new ReadableStream({start:"+r.createEffectfulFunction(["c"],"d.on({next:"+r.createEffectfulFunction(["v"],"c.enqueue(v)")+",throw:"+r.createEffectfulFunction(["v"],"c.error(v)")+",return:"+r.createEffectfulFunction([],"c.close()")+"})")+"})")},deserialize(){return o}});function g(e){let r=M$1(),s=e.getReader();async function a(){try{let t=await s.read();t.done?r.return(t.value):(r.next(t.value),await a());}catch(t){r.throw(t);}}return a().catch(()=>{}),r}var G=Mr({tag:"seroval/plugins/web/ReadableStream",extends:[V],test(e){return typeof ReadableStream=="undefined"?!1:e instanceof ReadableStream},parse:{sync(e,r){return {factory:r.parse(o),stream:r.parse(M$1())}},async async(e,r){return {factory:await r.parse(o),stream:await r.parse(g(e))}},stream(e,r){return {factory:r.parse(o),stream:r.parse(g(e))}}},serialize(e,r){return "("+r.serialize(e.factory)+")("+r.serialize(e.stream)+")"},deserialize(e,r){let s=r.deserialize(e.stream);return new ReadableStream({start(a){s.on({next(t){a.enqueue(t);},throw(t){a.error(t);},return(){a.close();}});}})}}),l=G;function z(e,r){return {body:r,cache:e.cache,credentials:e.credentials,headers:e.headers,integrity:e.integrity,keepalive:e.keepalive,method:e.method,mode:e.mode,redirect:e.redirect,referrer:e.referrer,referrerPolicy:e.referrerPolicy}}var K=Mr({tag:"seroval-plugins/web/Request",extends:[l,i],test(e){return typeof Request=="undefined"?!1:e instanceof Request},parse:{async async(e,r){return {url:await r.parse(e.url),options:await r.parse(z(e,e.body?await e.clone().arrayBuffer():null))}},stream(e,r){return {url:r.parse(e.url),options:r.parse(z(e,e.clone().body))}}},serialize(e,r){return "new Request("+r.serialize(e.url)+","+r.serialize(e.options)+")"},deserialize(e,r){return new Request(r.deserialize(e.url),r.deserialize(e.options))}}),Q=K;function S(e){return {headers:e.headers,status:e.status,statusText:e.statusText}}var X=Mr({tag:"seroval-plugins/web/Response",extends:[l,i],test(e){return typeof Response=="undefined"?!1:e instanceof Response},parse:{async async(e,r){return {body:await r.parse(e.body?await e.clone().arrayBuffer():null),options:await r.parse(S(e))}},stream(e,r){return {body:r.parse(e.clone().body),options:r.parse(S(e))}}},serialize(e,r){return "new Response("+r.serialize(e.body)+","+r.serialize(e.options)+")"},deserialize(e,r){return new Response(r.deserialize(e.body),r.deserialize(e.options))}}),Z=X;var x=Mr({tag:"seroval-plugins/web/URLSearchParams",test(e){return typeof URLSearchParams=="undefined"?!1:e instanceof URLSearchParams},parse:{sync(e,r){return r.parse(e.toString())},async async(e,r){return await r.parse(e.toString())},stream(e,r){return r.parse(e.toString())}},serialize(e,r){return "new URLSearchParams("+r.serialize(e)+")"},deserialize(e,r){return new URLSearchParams(r.deserialize(e))}}),ee=x;var ae=Mr({tag:"seroval-plugins/web/URL",test(e){return typeof URL=="undefined"?!1:e instanceof URL},parse:{sync(e,r){return r.parse(e.href)},async async(e,r){return await r.parse(e.href)},stream(e,r){return r.parse(e.href)}},serialize(e,r){return "new URL("+r.serialize(e)+")"},deserialize(e,r){return new URL(r.deserialize(e))}}),te=ae;
+
+const booleans = ["allowfullscreen", "async", "autofocus", "autoplay", "checked", "controls", "default", "disabled", "formnovalidate", "hidden", "indeterminate", "inert", "ismap", "loop", "multiple", "muted", "nomodule", "novalidate", "open", "playsinline", "readonly", "required", "reversed", "seamless", "selected"];
 const BooleanAttributes = /*#__PURE__*/new Set(booleans);
 const ChildProperties = /*#__PURE__*/new Set(["innerHTML", "textContent", "innerText", "children"]);
 const Aliases = /*#__PURE__*/Object.assign(Object.create(null), {
@@ -547,17 +530,33 @@ const Aliases = /*#__PURE__*/Object.assign(Object.create(null), {
   htmlFor: "for"
 });
 
-const ES2017FLAG = I.AggregateError
-| I.BigInt
-| I.BigIntTypedArray;
-function stringify(data) {
-  return gr(data, {
-    disabledFeatures: ES2017FLAG
+const ES2017FLAG = T.AggregateError
+| T.BigIntTypedArray;
+const GLOBAL_IDENTIFIER = '_$HY.r';
+function createSerializer({
+  onData,
+  onDone,
+  scopeId,
+  onError
+}) {
+  return new ke({
+    scopeId,
+    plugins: [
+    F, B, O,
+    A, i, l, Q, Z, ee, te],
+    globalIdentifier: GLOBAL_IDENTIFIER,
+    disabledFeatures: ES2017FLAG,
+    onData,
+    onDone,
+    onError
   });
+}
+function getLocalHeaderScript(id) {
+  return hr(id) + ';';
 }
 
 const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$/i;
-const REPLACE_SCRIPT = `function $df(e,n,t,o,d){if(t=document.getElementById(e),o=document.getElementById("pl-"+e)){for(;o&&8!==o.nodeType&&o.nodeValue!=="pl-"+e;)d=o.nextSibling,o.remove(),o=d;_$HY.done?o.remove():o.replaceWith(t.content)}t.remove(),_$HY.set(e,n),_$HY.fe(e)}`;
+const REPLACE_SCRIPT = `function $df(e,n,o,t){if(n=document.getElementById(e),o=document.getElementById("pl-"+e)){for(;o&&8!==o.nodeType&&o.nodeValue!=="pl-"+e;)t=o.nextSibling,o.remove(),o=t;_$HY.done?o.remove():o.replaceWith(n.content)}n.remove(),_$HY.fe(e)}`;
 function renderToStringAsync(code, options = {}) {
   const {
     timeoutMs = 30000
@@ -576,38 +575,52 @@ function renderToStream(code, options = {}) {
     nonce,
     onCompleteShell,
     onCompleteAll,
-    renderId
+    renderId,
+    noScripts
   } = options;
   let dispose;
-  const blockingResources = [];
-  const registry = new Map();
-  const dedupe = new WeakMap();
-  const checkEnd = () => {
-    if (!registry.size && !completed) {
-      writeTasks();
-      onCompleteAll && onCompleteAll({
-        write(v) {
-          !completed && buffer.write(v);
-        }
-      });
-      writable && writable.end();
-      completed = true;
-      setTimeout(dispose);
-    }
-  };
+  const blockingPromises = [];
   const pushTask = task => {
+    if (noScripts) return;
+    if (!tasks && !firstFlushed) {
+      tasks = getLocalHeaderScript(renderId);
+    }
     tasks += task + ";";
-    if (!scheduled && firstFlushed) {
-      Promise.resolve().then(writeTasks);
-      scheduled = true;
+    if (!timer && firstFlushed) {
+      timer = setTimeout(writeTasks);
     }
   };
+  const onDone = () => {
+    writeTasks();
+    doShell();
+    onCompleteAll && onCompleteAll({
+      write(v) {
+        !completed && buffer.write(v);
+      }
+    });
+    writable && writable.end();
+    completed = true;
+    if (firstFlushed) dispose();
+  };
+  const serializer = createSerializer({
+    scopeId: options.renderId,
+    onData: pushTask,
+    onDone,
+    onError: options.onError
+  });
+  const flushEnd = () => {
+    if (!registry.size) {
+      queue(() => queue(() => serializer.flush()));
+    }
+  };
+  const registry = new Map();
   const writeTasks = () => {
     if (tasks.length && !completed && firstFlushed) {
       buffer.write(`<script${nonce ? ` nonce="${nonce}"` : ""}>${tasks}</script>`);
       tasks = "";
     }
-    scheduled = false;
+    timer && clearTimeout(timer);
+    timer = null;
   };
   let context;
   let writable;
@@ -615,8 +628,9 @@ function renderToStream(code, options = {}) {
   let tasks = "";
   let firstFlushed = false;
   let completed = false;
+  let shellCompleted = false;
   let scriptFlushed = false;
-  let scheduled = true;
+  let timer = null;
   let buffer = {
     write(payload) {
       tmp += payload;
@@ -632,50 +646,61 @@ function renderToStream(code, options = {}) {
     assets: [],
     nonce,
     block(p) {
-      if (!firstFlushed) blockingResources.push(p);
+      if (!firstFlushed) blockingPromises.push(p);
     },
     replace(id, payloadFn) {
       if (firstFlushed) return;
-      const placeholder = `<!!$${id}>`;
+      const placeholder = `<!--!$${id}-->`;
       const first = html.indexOf(placeholder);
       if (first === -1) return;
-      const last = html.indexOf(`<!!$/${id}>`, first + placeholder.length);
+      const last = html.indexOf(`<!--!$/${id}-->`, first + placeholder.length);
       html = html.replace(html.slice(first, last + placeholder.length + 1), resolveSSRNode(payloadFn()));
     },
-    writeResource(id, p, error, wait) {
+    serialize(id, p, wait) {
       const serverOnly = sharedConfig.context.noHydrate;
-      if (error) return !serverOnly && pushTask(serializeSet(dedupe, id, p));
-      if (!p || typeof p !== "object" || !("then" in p)) return !serverOnly && pushTask(serializeSet(dedupe, id, p));
-      if (!firstFlushed) wait && blockingResources.push(p);else !serverOnly && pushTask(`_$HY.init("${id}")`);
-      if (serverOnly) return;
-      p.then(d => {
-        !completed && pushTask(serializeSet(dedupe, id, d));
-      }).catch(() => {
-        !completed && pushTask(`_$HY.set("${id}", {})`);
-      });
+      if (!firstFlushed && wait && typeof p === "object" && "then" in p) {
+        blockingPromises.push(p);
+        !serverOnly && p.then(d => {
+          serializer.write(id, d);
+        }).catch(e => {
+          serializer.write(id, e);
+        });
+      } else if (!serverOnly) serializer.write(id, p);
+    },
+    roots: 0,
+    nextRoot() {
+      return this.renderId + "i-" + this.roots++;
     },
     registerFragment(key) {
       if (!registry.has(key)) {
-        registry.set(key, []);
-        firstFlushed && pushTask(`_$HY.init("${key}")`);
+        let resolve, reject;
+        const p = new Promise((r, rej) => (resolve = r, reject = rej));
+        registry.set(key, err => queue(() => queue(() => {
+          err ? reject(err) : resolve(true);
+          queue(flushEnd);
+        })));
+        serializer.write(key, p);
       }
       return (value, error) => {
         if (registry.has(key)) {
-          const keys = registry.get(key);
+          const resolve = registry.get(key);
           registry.delete(key);
-          if (waitForFragments(registry, key)) return;
-          if ((value !== undefined || error) && !completed) {
+          if (waitForFragments(registry, key)) {
+            resolve();
+            return;
+          }
+          if (!completed) {
             if (!firstFlushed) {
-              Promise.resolve().then(() => html = replacePlaceholder(html, key, value !== undefined ? value : ""));
-              error && pushTask(serializeSet(dedupe, key, error));
+              queue(() => html = replacePlaceholder(html, key, value !== undefined ? value : ""));
+              resolve(error);
             } else {
               buffer.write(`<template id="${key}">${value !== undefined ? value : " "}</template>`);
-              pushTask(`${keys.length ? keys.map(k => `_$HY.unset("${k}")`).join(";") + ";" : ""}$df("${key}"${error ? "," + stringify(error) : ""})${!scriptFlushed ? ";" + REPLACE_SCRIPT : ""}`);
+              pushTask(`$df("${key}")${!scriptFlushed ? ";" + REPLACE_SCRIPT : ""}`);
+              resolve(error);
               scriptFlushed = true;
             }
           }
         }
-        if (!registry.size) Promise.resolve().then(checkEnd);
         return firstFlushed;
       };
     }
@@ -685,66 +710,77 @@ function renderToStream(code, options = {}) {
     return resolveSSRNode(escape(code()));
   });
   function doShell() {
+    if (shellCompleted) return;
     sharedConfig.context = context;
     context.noHydrate = true;
     html = injectAssets(context.assets, html);
-    for (const key in context.resources) {
-      if (!("data" in context.resources[key] || context.resources[key].ref[0].error)) pushTask(`_$HY.init("${key}")`);
-    }
-    for (const key of registry.keys()) pushTask(`_$HY.init("${key}")`);
     if (tasks.length) html = injectScripts(html, tasks, nonce);
     buffer.write(html);
     tasks = "";
-    scheduled = false;
     onCompleteShell && onCompleteShell({
       write(v) {
         !completed && buffer.write(v);
       }
     });
+    shellCompleted = true;
   }
   return {
     then(fn) {
       function complete() {
-        doShell();
+        dispose();
         fn(tmp);
       }
       if (onCompleteAll) {
-        ogComplete = onCompleteAll;
+        let ogComplete = onCompleteAll;
         onCompleteAll = options => {
           ogComplete(options);
           complete();
         };
       } else onCompleteAll = complete;
-      if (!registry.size) Promise.resolve().then(checkEnd);
+      queue(flushEnd);
     },
     pipe(w) {
-      Promise.allSettled(blockingResources).then(() => {
-        doShell();
-        buffer = writable = w;
-        buffer.write(tmp);
-        firstFlushed = true;
-        if (completed) writable.end();else setTimeout(checkEnd);
+      allSettled(blockingPromises).then(() => {
+        setTimeout(() => {
+          doShell();
+          buffer = writable = w;
+          buffer.write(tmp);
+          firstFlushed = true;
+          if (completed) {
+            dispose();
+            writable.end();
+          } else flushEnd();
+        });
       });
     },
     pipeTo(w) {
-      Promise.allSettled(blockingResources).then(() => {
-        doShell();
-        const encoder = new TextEncoder();
-        const writer = w.getWriter();
-        writable = {
-          end() {
-            writer.releaseLock();
-            w.close();
-          }
-        };
-        buffer = {
-          write(payload) {
-            writer.write(encoder.encode(payload));
-          }
-        };
-        buffer.write(tmp);
-        firstFlushed = true;
-        if (completed) writable.end();else setTimeout(checkEnd);
+      return allSettled(blockingPromises).then(() => {
+        let resolve;
+        const p = new Promise(r => resolve = r);
+        setTimeout(() => {
+          doShell();
+          const encoder = new TextEncoder();
+          const writer = w.getWriter();
+          writable = {
+            end() {
+              writer.releaseLock();
+              w.close();
+              resolve();
+            }
+          };
+          buffer = {
+            write(payload) {
+              writer.write(encoder.encode(payload));
+            }
+          };
+          buffer.write(tmp);
+          firstFlushed = true;
+          if (completed) {
+            dispose();
+            writable.end();
+          } else flushEnd();
+        });
+        return p;
       });
     }
   };
@@ -787,7 +823,7 @@ function ssrClassList(value) {
 }
 function ssrStyle(value) {
   if (!value) return "";
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return escape(value, true);
   let result = "";
   const k = Object.keys(value);
   for (let i = 0; i < k.length; i++) {
@@ -825,7 +861,7 @@ function ssrElement(tag, props, children, needsId) {
     } else if (value == undefined || prop === "ref" || prop.slice(0, 2) === "on") {
       continue;
     } else {
-      result += `${Aliases[prop] || prop}="${escape(value, true)}"`;
+      result += `${Aliases[prop] || escape(prop)}="${escape(value, true)}"`;
     }
     if (i !== keys.length - 1) result += " ";
   }
@@ -842,7 +878,7 @@ function ssrAttribute(key, value, isBoolean) {
 }
 function ssrHydrationKey() {
   const hk = getHydrationKey();
-  return hk ? ` data-hk="${hk}"` : "";
+  return hk ? ` data-hk=${hk}` : "";
 }
 function escape(s, attr) {
   const t = typeof s;
@@ -909,7 +945,7 @@ function resolveSSRNode(node, top) {
 }
 function getHydrationKey() {
   const hydrate = sharedConfig.context;
-  return hydrate && !hydrate.noHydrate && `${hydrate.id}${hydrate.count++}`;
+  return hydrate && !hydrate.noHydrate && sharedConfig.getNextContextId();
 }
 function useAssets(fn) {
   sharedConfig.context.assets.push(() => resolveSSRNode(fn()));
@@ -918,11 +954,21 @@ function generateHydrationScript({
   eventNames = ["click", "input"],
   nonce
 } = {}) {
-  return `<script${nonce ? ` nonce="${nonce}"` : ""}>(e=>{let t=e=>e&&e.hasAttribute&&(e.hasAttribute("data-hk")?e:t(e.host&&e.host.nodeType?e.host:e.parentNode));["${eventNames.join('", "')}"].forEach((o=>document.addEventListener(o,(o=>{let s=o.composedPath&&o.composedPath()[0]||o.target,a=t(s);a&&!e.completed.has(a)&&e.events.push([a,o])}))))})(window._$HY||(_$HY={events:[],completed:new WeakSet,r:{},fe(){},init(e,t){_$HY.r[e]=[new Promise((e=>t=e)),t]},set(e,t,o){(o=_$HY.r[e])&&o[1](t),_$HY.r[e]=[t]},unset(e){delete _$HY.r[e]},load:e=>_$HY.r[e]}));</script><!--xs-->`;
+  return `<script${nonce ? ` nonce="${nonce}"` : ""}>window._$HY||(e=>{let t=e=>e&&e.hasAttribute&&(e.hasAttribute("data-hk")?e:t(e.host&&e.host.nodeType?e.host:e.parentNode));["${eventNames.join('", "')}"].forEach((o=>document.addEventListener(o,(o=>{let a=o.composedPath&&o.composedPath()[0]||o.target,s=t(a);s&&!e.completed.has(s)&&e.events.push([s,o])}))))})(_$HY={events:[],completed:new WeakSet,r:{},fe(){}});</script><!--xs-->`;
 }
 function NoHydration(props) {
   sharedConfig.context.noHydrate = true;
   return props.children;
+}
+function queue(fn) {
+  return Promise.resolve().then(fn);
+}
+function allSettled(promises) {
+  let length = promises.length;
+  return Promise.allSettled(promises).then(() => {
+    if (promises.length !== length) return allSettled(promises);
+    return;
+  });
 }
 function injectAssets(assets, html) {
   if (!assets || !assets.length) return html;
@@ -940,22 +986,13 @@ function injectScripts(html, scripts, nonce) {
 }
 function waitForFragments(registry, key) {
   for (const k of [...registry.keys()].reverse()) {
-    if (key.startsWith(k)) {
-      registry.get(k).push(key);
-      return true;
-    }
+    if (key.startsWith(k)) return true;
   }
   return false;
 }
-function serializeSet(registry, key, value) {
-  const exist = registry.get(value);
-  if (exist) return `_$HY.set("${key}", _$HY.r["${exist}"][0])`;
-  value !== null && typeof value === "object" && registry.set(value, key);
-  return `_$HY.set("${key}", ${stringify(value)})`;
-}
 function replacePlaceholder(html, key, value) {
   const marker = `<template id="pl-${key}">`;
-  const close = `<!pl-${key}>`;
+  const close = `<!--pl-${key}-->`;
   const first = html.indexOf(marker);
   if (first === -1) return html;
   const last = html.indexOf(close, first + marker.length);
@@ -1210,10 +1247,6 @@ const api = [
   {
     GET: "skip",
     path: "/"
-  },
-  {
-    GET: "skip",
-    path: "/test"
   }
 ];
 function expandOptionals$1(pattern) {
@@ -1482,19 +1515,6 @@ function createMemoObject(fn) {
         }
     });
 }
-function mergeSearchString(search, params) {
-    const merged = new URLSearchParams(search);
-    Object.entries(params).forEach(([key, value]) => {
-        if (value == null || value === "") {
-            merged.delete(key);
-        }
-        else {
-            merged.set(key, String(value));
-        }
-    });
-    const s = merged.toString();
-    return s ? `?${s}` : "";
-}
 function expandOptionals(pattern) {
     let match = /(\/?\:[^\/]+)\?/.exec(pattern);
     if (!match)
@@ -1520,33 +1540,8 @@ const RouteContextObj = createContext();
 const useRouter = () => invariant(useContext(RouterContextObj), "Make sure your app is wrapped in a <Router />");
 let TempRoute;
 const useRoute = () => TempRoute || useContext(RouteContextObj) || useRouter().base;
-const useResolvedPath = (path) => {
-    const route = useRoute();
-    return createMemo(() => route.resolvePath(path()));
-};
-const useHref = (to) => {
-    const router = useRouter();
-    return createMemo(() => {
-        const to_ = to();
-        return to_ !== undefined ? router.renderPath(to_) : to_;
-    });
-};
 const useNavigate$1 = () => useRouter().navigatorFactory();
-const useLocation$1 = () => useRouter().location;
 const useRouteData = () => useRoute().data;
-const useSearchParams = () => {
-    const location = useLocation$1();
-    const navigate = useNavigate$1();
-    const setSearchParams = (params, options) => {
-        const searchString = untrack(() => mergeSearchString(location.search, params));
-        navigate(location.pathname + searchString + location.hash, {
-            scroll: false,
-            resolve: false,
-            ...options
-        });
-    };
-    return [location.query, setSearchParams];
-};
 function createRoutes(routeDef, base = "", fallback) {
     const { component, data, children } = routeDef;
     const isLeaf = !children || (Array.isArray(children) && !children.length);
@@ -1821,7 +1816,7 @@ function createRouteContext(router, parent, child, match, params) {
     return route;
 }
 
-const Router = props => {
+const Router = (props) => {
   const {
     source,
     url,
@@ -1840,7 +1835,7 @@ const Router = props => {
     }
   });
 };
-const Routes$1 = props => {
+const Routes$1 = (props) => {
   const router = useRouter();
   const parentRoute = useRoute();
   const routeDefs = children(() => props.children);
@@ -1848,22 +1843,22 @@ const Routes$1 = props => {
   const matches = createMemo(() => getRouteMatches(branches(), router.location.pathname));
   const params = createMemoObject(() => {
     const m = matches();
-    const params = {};
+    const params2 = {};
     for (let i = 0; i < m.length; i++) {
-      Object.assign(params, m[i].params);
+      Object.assign(params2, m[i].params);
     }
-    return params;
+    return params2;
   });
   if (router.out) {
     router.out.matches.push(matches().map(({
       route,
       path,
-      params
+      params: params2
     }) => ({
       originalPath: route.originalPath,
       pattern: route.pattern,
       path,
-      params
+      params: params2
     })));
   }
   const disposers = [];
@@ -1881,13 +1876,13 @@ const Routes$1 = props => {
         if (disposers[i]) {
           disposers[i]();
         }
-        createRoot(dispose => {
+        createRoot((dispose) => {
           disposers[i] = dispose;
           next[i] = createRouteContext(router, next[i - 1] || parentRoute, () => routeStates()[i + 1], () => matches()[i], params);
         });
       }
     }
-    disposers.splice(nextMatches.length).forEach(dispose => dispose());
+    disposers.splice(nextMatches.length).forEach((dispose) => dispose());
     if (prev && equal) {
       return prev;
     }
@@ -1899,7 +1894,7 @@ const Routes$1 = props => {
       return routeStates() && root;
     },
     keyed: true,
-    children: route => createComponent(RouteContextObj.Provider, {
+    children: (route) => createComponent(RouteContextObj.Provider, {
       value: route,
       get children() {
         return route.outlet();
@@ -1914,7 +1909,7 @@ const Outlet = () => {
       return route.child;
     },
     keyed: true,
-    children: child => createComponent(RouteContextObj.Provider, {
+    children: (child) => createComponent(RouteContextObj.Provider, {
       value: child,
       get children() {
         return child.outlet();
@@ -1922,48 +1917,9 @@ const Outlet = () => {
     })
   });
 };
-function A$1(props) {
-  props = mergeProps({
-    inactiveClass: "inactive",
-    activeClass: "active"
-  }, props);
-  const [, rest] = splitProps(props, ["href", "state", "class", "activeClass", "inactiveClass", "end"]);
-  const to = useResolvedPath(() => props.href);
-  const href = useHref(to);
-  const location = useLocation$1();
-  const isActive = createMemo(() => {
-    const to_ = to();
-    if (to_ === undefined) return false;
-    const path = normalizePath(to_.split(/[?#]/, 1)[0]).toLowerCase();
-    const loc = normalizePath(location.pathname).toLowerCase();
-    return props.end ? path === loc : loc.startsWith(path);
-  });
-  return ssrElement("a", mergeProps({
-    link: true
-  }, rest, {
-    get href() {
-      return href() || props.href;
-    },
-    get state() {
-      return JSON.stringify(props.state);
-    },
-    get classList() {
-      return {
-        ...(props.class && {
-          [props.class]: true
-        }),
-        [props.inactiveClass]: !isActive(),
-        [props.activeClass]: isActive(),
-        ...rest.classList
-      };
-    },
-    get ["aria-current"]() {
-      return isActive() ? "page" : undefined;
-    }
-  }), undefined, true);
-}
 
 class ServerError extends Error {
+  status;
   constructor(message, {
     status,
     stack
@@ -1977,6 +1933,9 @@ class ServerError extends Error {
   }
 }
 class FormError extends ServerError {
+  formError;
+  fields;
+  fieldErrors;
   constructor(message, {
     fieldErrors = {},
     form,
@@ -1993,49 +1952,11 @@ class FormError extends ServerError {
   }
 }
 
-/**
- * Submits a HTML `<form>` to the server without reloading the page.
- */
-
-/**
- * A Remix-aware `<form>`. It behaves like a normal form except that the
- * interaction with the server is with `fetch` instead of new document
- * requests, allowing components to add nicer UX to the page as the form is
- * submitted and returns with data.
- */
-// export let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
-//   return <FormImpl {...props} ref={ref} />;
-// });
-let FormImpl = _props => {
-  let [props, rest] = splitProps(mergeProps({
-    reloadDocument: false,
-    replace: false,
-    method: "post",
-    action: "/",
-    encType: "application/x-www-form-urlencoded"
-  }, _props), ["reloadDocument", "replace", "method", "action", "encType", "onSubmission", "onSubmit", "children", "ref"]);
-  let formMethod = props.method.toLowerCase() === "get" ? "get" : "post";
-  return ssrElement("form", mergeProps({
-    method: formMethod,
-    get action() {
-      return _props.action;
-    },
-    get enctype() {
-      return props.encType;
-    }
-  }, rest), () => escape(props.children), true);
-};
-
 const ServerContext = createContext({});
-const useRequest = () => {
-  return useContext(ServerContext);
-};
 
-const A = A$1;
 const Routes = Routes$1;
-const useLocation = useLocation$1;
 const useNavigate = useNavigate$1;
-const promises = new Map();
+const promises = /* @__PURE__ */ new Map();
 function createRouteData(fetcher, options = {}) {
   const navigate = useNavigate();
   const pageEvent = useContext(ServerContext);
@@ -2057,7 +1978,7 @@ function createRouteData(fetcher, options = {}) {
       }
     }
   }
-  const resourceFetcher = async key => {
+  const resourceFetcher = async (key) => {
     try {
       let event = pageEvent;
       if (isServer && pageEvent) {
@@ -2087,15 +2008,17 @@ function createRouteData(fetcher, options = {}) {
       throw e;
     }
   };
-  function dedupe(fetcher) {
+  function dedupe(fetcher2) {
     return (key, info) => {
       if (info.refetching && info.refetching !== true && !partialMatch(key, info.refetching) && info.value) {
         return info.value;
       }
-      if (key == true) return fetcher(key, info);
+      if (key == true)
+        return fetcher2(key, info);
       let promise = promises.get(key);
-      if (promise) return promise;
-      promise = fetcher(key, info);
+      if (promise)
+        return promise;
+      promise = fetcher2(key, info);
       promises.set(key, promise);
       return promise.finally(() => promises.delete(key));
     };
@@ -2103,37 +2026,28 @@ function createRouteData(fetcher, options = {}) {
   const [resource, {
     refetch
   }] = createResource(options.key || true, dedupe(resourceFetcher), {
-    storage: init => createDeepSignal(init, options.reconcileOptions),
+    storage: (init) => createDeepSignal(init, options.reconcileOptions),
     ...options
   });
   return resource;
-}
-function refetchRouteData(key) {
-  throw new Error("Cannot refetch route data on the server.");
 }
 function createDeepSignal(value, options) {
   const [store, setStore] = createStore({
     value
   });
-  return [() => store.value, v => {
+  return [() => store.value, (v) => {
     const unwrapped = untrack(() => unwrap(store.value));
     typeof v === "function" && (v = v(unwrapped));
     setStore("value", reconcile(v, options));
     return store.value;
   }];
 }
-
-/* React Query key matching  https://github.com/tannerlinsley/react-query */
 function partialMatch(a, b) {
   return partialDeepEqual(ensureQueryKeyArray(a), ensureQueryKeyArray(b));
 }
 function ensureQueryKeyArray(value) {
   return Array.isArray(value) ? value : [value];
 }
-
-/**
- * Checks if `b` partially matches with `a`.
- */
 function partialDeepEqual(a, b) {
   if (a === b) {
     return true;
@@ -2141,198 +2055,12 @@ function partialDeepEqual(a, b) {
   if (typeof a !== typeof b) {
     return false;
   }
-  if (a.length && !b.length) return false;
+  if (a.length && !b.length)
+    return false;
   if (a && b && typeof a === "object" && typeof b === "object") {
-    return !Object.keys(b).some(key => !partialDeepEqual(a[key], b[key]));
+    return !Object.keys(b).some((key) => !partialDeepEqual(a[key], b[key]));
   }
   return false;
-}
-
-function createRouteAction(fn, options = {}) {
-  let init = checkFlash(fn);
-  const [input, setInput] = createSignal(init.input);
-  const [result, setResult] = createSignal(init.result);
-  const navigate = useNavigate$1();
-  const event = useRequest();
-  let count = 0;
-  function submit(variables) {
-    const p = fn(variables, event);
-    const reqId = ++count;
-    batch(() => {
-      setResult(undefined);
-      setInput(() => variables);
-    });
-    return p.then(async data => {
-      if (reqId === count) {
-        if (data instanceof Response) {
-          await handleResponse(data, navigate, options);
-        } else await handleRefetch(data, options);
-        if (!data || isRedirectResponse(data)) setInput(undefined);else setResult({
-          data
-        });
-      }
-      return data;
-    }).catch(async e => {
-      if (reqId === count) {
-        if (e instanceof Response) {
-          await handleResponse(e, navigate, options);
-        }
-        if (!isRedirectResponse(e)) {
-          setResult({
-            error: e
-          });
-        } else setInput(undefined);
-      }
-      return undefined;
-    });
-  }
-  submit.url = fn.url;
-  submit.Form = props => {
-    let url = fn.url;
-    return createComponent(FormImpl, mergeProps(props, {
-      action: url,
-      onSubmission: submission => {
-        submit(submission.formData);
-      },
-      get children() {
-        return props.children;
-      }
-    }));
-  };
-  return [{
-    get pending() {
-      return !!input() && !result();
-    },
-    get input() {
-      return input();
-    },
-    get result() {
-      return result()?.data;
-    },
-    get error() {
-      return result()?.error;
-    },
-    clear() {
-      batch(() => {
-        setInput(undefined);
-        setResult(undefined);
-      });
-    },
-    retry() {
-      const variables = input();
-      if (!variables) throw new Error("No submission to retry");
-      submit(variables);
-    }
-  }, submit];
-}
-function createRouteMultiAction(fn, options = {}) {
-  let init = checkFlash(fn);
-  const [submissions, setSubmissions] = createSignal(init.input ? [createSubmission(init.input)[0]] : []);
-  const navigate = useNavigate$1();
-  const event = useContext(ServerContext);
-  function createSubmission(variables) {
-    let submission;
-    const [result, setResult] = createSignal();
-    return [submission = {
-      input: variables,
-      get result() {
-        return result()?.data;
-      },
-      get error() {
-        return result()?.error;
-      },
-      clear() {
-        setSubmissions(v => v.filter(i => i.input !== variables));
-      },
-      retry() {
-        setResult(undefined);
-        return event && handleSubmit(fn(variables, event));
-      }
-    }, handleSubmit];
-    function handleSubmit(p) {
-      p.then(async data => {
-        if (data instanceof Response) {
-          await handleResponse(data, navigate, options);
-          data = data.body;
-        } else await handleRefetch(data, options);
-        data ? setResult({
-          data
-        }) : submission.clear();
-        return data;
-      }).catch(async e => {
-        if (e instanceof Response) {
-          await handleResponse(e, navigate, options);
-        } else await handleRefetch(e, options);
-        if (!isRedirectResponse(e)) {
-          setResult({
-            error: e
-          });
-        } else submission.clear();
-      });
-      return p;
-    }
-  }
-  function submit(variables) {
-    if (!event) {
-      throw new Error('submit was called without an event');
-    }
-    const [submission, handleSubmit] = createSubmission(variables);
-    setSubmissions(s => [...s, submission]);
-    return handleSubmit(fn(variables, event));
-  }
-  submit.url = fn.url;
-  submit.Form = props => {
-    let url = fn.url;
-    return createComponent(FormImpl, mergeProps(props, {
-      action: url,
-      onSubmission: submission => {
-        submit(submission.formData);
-      },
-      get children() {
-        return props.children;
-      }
-    }));
-  };
-  return [new Proxy([], {
-    get(_, property) {
-      if (property === $TRACK) return submissions();
-      if (property === "pending") return submissions().filter(sub => !sub.result);
-      return submissions()[property];
-    }
-  }), submit];
-}
-function handleRefetch(response, options = {}) {
-  return refetchRouteData(typeof options.invalidate === "function" ? options.invalidate(response) : options.invalidate);
-}
-function handleResponse(response, navigate, options) {
-  if (response instanceof Response && isRedirectResponse(response)) {
-    const locationUrl = response.headers.get("Location") || "/";
-    if (locationUrl.startsWith("http")) {
-      window.location.href = locationUrl;
-    } else {
-      navigate(locationUrl);
-    }
-  }
-  return handleRefetch(response, options);
-}
-function checkFlash(fn) {
-  const [params] = useSearchParams();
-  let param = params.form ? JSON.parse(params.form) : null;
-  if (!param || param.url !== fn.url) {
-    return {};
-  }
-  const input = new Map(param.entries);
-  return {
-    result: {
-      error: param.error ? new FormError(param.error.message, {
-        fieldErrors: param.error.fieldErrors,
-        stack: param.error.stack,
-        form: param.error.form,
-        fields: param.error.fields
-      }) : undefined
-    },
-    input: input
-  };
 }
 
 const server$ = (_fn) => {
@@ -2651,30 +2379,42 @@ function handleIslandsRouting(pageEvent, markup) {
 
 const MetaContext = createContext();
 const cascadingTags = ["title", "meta"];
-const getTagType = tag => tag.tag + (tag.name ? `.${tag.name}"` : "");
-const MetaProvider = props => {
-  const cascadedTagInstances = new Map();
+const titleTagProperties = [];
+const metaTagProperties = (
+  // https://html.spec.whatwg.org/multipage/semantics.html#the-meta-element
+  ["name", "http-equiv", "content", "charset", "media"].concat(["property"])
+);
+const getTagKey = (tag, properties) => {
+  const tagProps = Object.fromEntries(Object.entries(tag.props).filter(([k]) => properties.includes(k)).sort());
+  if (Object.hasOwn(tagProps, "name") || Object.hasOwn(tagProps, "property")) {
+    tagProps.name = tagProps.name || tagProps.property;
+    delete tagProps.property;
+  }
+  return tag.tag + JSON.stringify(tagProps);
+};
+const MetaProvider = (props) => {
+  const cascadedTagInstances = /* @__PURE__ */ new Map();
   const actions = {
-    addClientTag: tag => {
-      let tagType = getTagType(tag);
+    addClientTag: (tag) => {
       if (cascadingTags.indexOf(tag.tag) !== -1) {
-        //  only cascading tags need to be kept as singletons
-        if (!cascadedTagInstances.has(tagType)) {
-          cascadedTagInstances.set(tagType, []);
+        const properties = tag.tag === "title" ? titleTagProperties : metaTagProperties;
+        const tagKey = getTagKey(tag, properties);
+        if (!cascadedTagInstances.has(tagKey)) {
+          cascadedTagInstances.set(tagKey, []);
         }
-        let instances = cascadedTagInstances.get(tagType);
+        let instances = cascadedTagInstances.get(tagKey);
         let index = instances.length;
         instances = [...instances, tag];
-        // track indices synchronously
-        cascadedTagInstances.set(tagType, instances);
+        cascadedTagInstances.set(tagKey, instances);
         return index;
       }
       return -1;
     },
     removeClientTag: (tag, index) => {
-      const tagName = getTagType(tag);
+      const properties = tag.tag === "title" ? titleTagProperties : metaTagProperties;
+      const tagKey = getTagKey(tag, properties);
       if (tag.ref) {
-        const t = cascadedTagInstances.get(tagName);
+        const t = cascadedTagInstances.get(tagKey);
         if (t) {
           if (tag.ref.parentNode) {
             tag.ref.parentNode.removeChild(tag.ref);
@@ -2685,7 +2425,7 @@ const MetaProvider = props => {
             }
           }
           t[index] = null;
-          cascadedTagInstances.set(tagName, t);
+          cascadedTagInstances.set(tagKey, t);
         } else {
           if (tag.ref.parentNode) {
             tag.ref.parentNode.removeChild(tag.ref);
@@ -2695,17 +2435,14 @@ const MetaProvider = props => {
     }
   };
   {
-    actions.addServerTag = tagDesc => {
+    actions.addServerTag = (tagDesc) => {
       const {
         tags = []
       } = props;
-      // tweak only cascading tags
       if (cascadingTags.indexOf(tagDesc.tag) !== -1) {
-        const index = tags.findIndex(prev => {
-          const prevName = prev.props.name || prev.props.property;
-          const nextName = tagDesc.props.name || tagDesc.props.property;
-          return prev.tag === tagDesc.tag && prevName === nextName;
-        });
+        const properties = tagDesc.tag === "title" ? titleTagProperties : metaTagProperties;
+        const tagDescKey = getTagKey(tagDesc, properties);
+        const index = tags.findIndex((prev) => prev.tag === tagDesc.tag && getTagKey(prev, properties) === tagDescKey);
         if (index !== -1) {
           tags.splice(index, 1);
         }
@@ -2726,7 +2463,8 @@ const MetaProvider = props => {
 const MetaTag = (tag, props, setting) => {
   const id = createUniqueId();
   const c = useContext(MetaContext);
-  if (!c) throw new Error("<MetaProvider /> should be in the tree");
+  if (!c)
+    throw new Error("<MetaProvider /> should be in the tree");
   useHead({
     tag,
     props,
@@ -2753,410 +2491,19 @@ function useHead(tagDesc) {
   }
 }
 function renderTags(tags) {
-  return tags.map(tag => {
+  return tags.map((tag) => {
     const keys = Object.keys(tag.props);
-    // @ts-expect-error
-    const props = keys.map(k => k === "children" ? "" : ` ${k}="${escape(tag.props[k], true)}"`).join("");
-    if (tag.props.children) {
-      // Tags might contain multiple text children:
-      //   <Title>example - {myCompany}</Title>
-      const children = Array.isArray(tag.props.children) ? tag.props.children.join("") : tag.props.children;
-      if (tag.setting?.escape && typeof children === "string") {
-        return `<${tag.tag} data-sm="${tag.id}"${props}>${escape(children)}</${tag.tag}>`;
-      }
-      return `<${tag.tag} data-sm="${tag.id}"${props}>${children}</${tag.tag}>`;
+    const props = keys.map((k) => k === "children" ? "" : ` ${k}="${// @ts-expect-error
+    escape(tag.props[k], true)}"`).join("");
+    const children = tag.props.children;
+    if (tag.setting?.close) {
+      return `<${tag.tag} data-sm="${tag.id}"${props}>${// @ts-expect-error
+      tag.setting?.escape ? escape(children) : children || ""}</${tag.tag}>`;
     }
     return `<${tag.tag} data-sm="${tag.id}"${props}/>`;
   }).join("");
 }
-const Meta$1 = props => MetaTag("meta", props, {
-  escape: true
-});
-
-let COUNTER = 0;
-let TODOS = [];
-const DELAY = 120;
-function delay(fn) {
-  return new Promise((res) => setTimeout(() => res(fn()), DELAY));
-}
-const db = {
-  getTodos() {
-    return delay(() => TODOS);
-  },
-  addTodo(title) {
-    return delay(() => TODOS.push({ id: COUNTER++, title, completed: false }));
-  },
-  removeTodo(id) {
-    return delay(() => TODOS = TODOS.filter((todo) => todo.id !== id));
-  },
-  toggleTodo(id) {
-    return delay(
-      () => TODOS.forEach(
-        (todo) => todo.id === id && (todo.completed = !todo.completed)
-      )
-    );
-  },
-  editTodo(id, title) {
-    return delay(
-      () => TODOS.forEach((todo) => {
-        if (todo.id === id)
-          todo.title = title;
-      })
-    );
-  },
-  clearCompleted() {
-    return delay(() => TODOS = TODOS.filter((todo) => !todo.completed));
-  },
-  toggleAll(completed) {
-    return delay(() => TODOS.forEach((todo) => todo.completed = !completed));
-  }
-};
-
-const $$server_module0$3 = server$.createHandler(db.getTodos, "/_m/0dbe216f23/routeData", true);
-server$.registerHandler("/_m/0dbe216f23/routeData", $$server_module0$3);
-const routeData$1 = () => createRouteData($$server_module0$3, {
-  initialValue: []
-});
-const $$server_module1$1 = server$.createHandler(addTodoFn$1, "/_m/90d4313cf1/addingTodo", true);
-server$.registerHandler("/_m/90d4313cf1/addingTodo", $$server_module1$1);
-const $$server_module2$1 = server$.createHandler(removeTodoFn$1, "/_m/34a106c003/removingTodo", true);
-server$.registerHandler("/_m/34a106c003/removingTodo", $$server_module2$1);
-const $$server_module3$1 = server$.createHandler(toggleAllFn$1, "/_m/688bbd5a7c/togglingAll", true);
-server$.registerHandler("/_m/688bbd5a7c/togglingAll", $$server_module3$1);
-const $$server_module4$1 = server$.createHandler(clearCompletedFn$1, "/_m/38c1e00a88/fn", true);
-server$.registerHandler("/_m/38c1e00a88/fn", $$server_module4$1);
-const $$server_module5$1 = server$.createHandler(toggleTodoFn$1, "/_m/409aca386a/togglingTodo", true);
-server$.registerHandler("/_m/409aca386a/togglingTodo", $$server_module5$1);
-const $$server_module6$1 = server$.createHandler(editTodoFn$1, "/_m/f4e32d362b/editingTodo", true);
-server$.registerHandler("/_m/f4e32d362b/editingTodo", $$server_module6$1);
-async function addTodoFn$1(form) {
-  await db.addTodo(form.get("title"));
-  return redirect("/");
-}
-async function removeTodoFn$1(form) {
-  await db.removeTodo(Number(form.get("id")));
-  return redirect("/");
-}
-async function toggleAllFn$1(form) {
-  await db.toggleAll(form.get("completed") === "true");
-  return redirect("/");
-}
-async function clearCompletedFn$1(form) {
-  await db.clearCompleted();
-  return redirect("/");
-}
-async function toggleTodoFn$1(form) {
-  await db.toggleTodo(Number(form.get("id")));
-  return redirect("/");
-}
-async function editTodoFn$1(form) {
-  await db.editTodo(Number(form.get("id")), String(form.get("title")));
-  return redirect("/");
-}
-
-const _tmpl$$6 = ["<div", " style=\"", "\"><div style=\"", "\"><p style=\"", "\" id=\"error-message\">", "</p><button id=\"reset-errors\" style=\"", "\">Clear errors and retry</button><pre style=\"", "\">", "</pre></div></div>"];
-function ErrorBoundary(props) {
-  return createComponent(ErrorBoundary$1, {
-    fallback: (e, reset) => {
-      return createComponent(Show, {
-        get when() {
-          return !props.fallback;
-        },
-        get fallback() {
-          return props.fallback && props.fallback(e, reset);
-        },
-        get children() {
-          return createComponent(ErrorMessage, {
-            error: e
-          });
-        }
-      });
-    },
-    get children() {
-      return props.children;
-    }
-  });
-}
-function ErrorMessage(props) {
-  return ssr(_tmpl$$6, ssrHydrationKey(), "padding:" + "16px", "background-color:" + "rgba(252, 165, 165)" + (";color:" + "rgb(153, 27, 27)") + (";border-radius:" + "5px") + (";overflow:" + "scroll") + (";padding:" + "16px") + (";margin-bottom:" + "8px"), "font-weight:" + "bold", escape(props.error.message), "color:" + "rgba(252, 165, 165)" + (";background-color:" + "rgb(153, 27, 27)") + (";border-radius:" + "5px") + (";padding:" + "4px 8px"), "margin-top:" + "8px" + (";width:" + "100%"), escape(props.error.stack));
-}
-
-const routeLayouts = {
-  "/": {
-    "id": "/",
-    "layouts": []
-  },
-  "/test": {
-    "id": "/test",
-    "layouts": []
-  }
-};
-
-const _tmpl$$5 = ["<link", " rel=\"stylesheet\"", ">"],
-  _tmpl$2$5 = ["<link", " rel=\"modulepreload\"", ">"];
-function flattenIslands(match, manifest) {
-  let result = [...match];
-  match.forEach(m => {
-    if (m.type !== "island") return;
-    const islandManifest = manifest[m.href];
-    if (islandManifest) {
-      const res = flattenIslands(islandManifest.assets, manifest);
-      result.push(...res);
-    }
-  });
-  return result;
-}
-function getAssetsFromManifest(manifest, routerContext) {
-  let match = routerContext.matches ? routerContext.matches.reduce((memo, m) => {
-    if (m.length) {
-      const fullPath = m.reduce((previous, match) => previous + match.originalPath, "");
-      const route = routeLayouts[fullPath];
-      if (route) {
-        memo.push(...(manifest[route.id] || []));
-        const layoutsManifestEntries = route.layouts.flatMap(manifestKey => manifest[manifestKey] || []);
-        memo.push(...layoutsManifestEntries);
-      }
-    }
-    return memo;
-  }, []) : [];
-  match.push(...(manifest["entry-client"] || []));
-  match = manifest ? flattenIslands(match, manifest) : [];
-  const links = match.reduce((r, src) => {
-    r[src.href] = src.type === "style" ? ssr(_tmpl$$5, ssrHydrationKey(), ssrAttribute("href", escape(src.href, true), false)) : src.type === "script" ? ssr(_tmpl$2$5, ssrHydrationKey(), ssrAttribute("href", escape(src.href, true), false)) : undefined;
-    return r;
-  }, {});
-  return Object.values(links);
-}
-
-/**
- * Links are used to load assets for the server rendered HTML
- * @returns {JSXElement}
- */
-function Links() {
-  const context = useContext(ServerContext);
-  useAssets(() => getAssetsFromManifest(context.env.manifest, context.routerContext));
-  return null;
-}
-
-function Meta() {
-  const context = useContext(ServerContext);
-  // @ts-expect-error The ssr() types do not match the Assets child types
-  useAssets(() => ssr(renderTags(context.tags)));
-  return null;
-}
-
-const _tmpl$4$1 = ["<script", " type=\"module\" async", "></script>"];
-const isDev = "production" === "development";
-const isIslands = false;
-function Scripts() {
-  const context = useContext(ServerContext);
-  return [createComponent(HydrationScript, {}), isIslands , createComponent(NoHydration, {
-    get children() {
-      return (      ssr(_tmpl$4$1, ssrHydrationKey(), ssrAttribute("src", escape(context.env.manifest["entry-client"][0].href, true), false)) );
-    }
-  }), isDev ];
-}
-
-function Html(props) {
-  {
-    return ssrElement("html", props, undefined, false);
-  }
-}
-function Head(props) {
-  {
-    return ssrElement("head", props, () => [escape(props.children), createComponent(Meta, {}), createComponent(Links, {})], false);
-  }
-}
-function Body(props) {
-  {
-    return ssrElement("body", props, () => escape(props.children) , false);
-  }
-}
-
-const _tmpl$$4 = ["<svg", " xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"-3 -3 105 105\"><circle cx=\"50\" cy=\"50\" r=\"50\" fill=\"none\" stroke=\"#ededed\" stroke-width=\"3\"></circle></svg>"],
-  _tmpl$2$4 = ["<svg", " xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"-3 -3 105 105\"><circle cx=\"50\" cy=\"50\" r=\"50\" fill=\"none\" stroke=\"#bddad5\" stroke-width=\"3\"></circle><path fill=\"#5dc2af\" d=\"M72 25L42 71 27 56l-4 4 20 20 34-52z\"></path></svg>"];
-function IncompleteIcon() {
-  return ssr(_tmpl$$4, ssrHydrationKey());
-}
-function CompleteIcon() {
-  return ssr(_tmpl$2$4, ssrHydrationKey());
-}
-
-const _tmpl$$3 = ["<input", " name=\"title\" class=\"new-todo\" placeholder=\"What needs to be done?\" autofocus>"],
-  _tmpl$2$3 = ["<input", " name=\"completed\" type=\"hidden\"", ">"],
-  _tmpl$3$2 = ["<button", " class=\"", "\" type=\"submit\">\u276F</button>"],
-  _tmpl$4 = ["<button", " class=\"clear-completed\">Clear completed</button>"],
-  _tmpl$5 = ["<footer", " class=\"footer\"><span class=\"todo-count\"><strong>", "</strong> <!--#-->", "<!--/--> left</span><ul class=\"filters\"><li>", "</li><li>", "</li><li>", "</li></ul><!--#-->", "<!--/--></footer>"],
-  _tmpl$6 = ["<section", " class=\"todoapp\"><header class=\"header\"><h1 class=\"bg-red-700\">todos</h1><!--#-->", "<!--/--></header><section class=\"main\"><!--#-->", "<!--/--><ul class=\"todo-list\"><!--#-->", "<!--/--><!--#-->", "<!--/--></ul></section><!--#-->", "<!--/--></section>"],
-  _tmpl$7 = ["<input", " type=\"hidden\" name=\"id\"", ">"],
-  _tmpl$8 = ["<button", " type=\"submit\" class=\"toggle\"", ">", "</button>"],
-  _tmpl$9 = ["<button", " type=\"submit\" class=\"destroy\"></button>"],
-  _tmpl$10 = ["<input", " name=\"title\" class=\"edit\"", ">"],
-  _tmpl$11 = ["<li", " class=\"", "\"><div class=\"view\"><!--#-->", "<!--/--><label>", "</label><!--#-->", "<!--/--></div><!--#-->", "<!--/--></li>"],
-  _tmpl$12 = ["<li", " class=\"todo pending\"><div class=\"view\"><label>", "</label><button disabled class=\"destroy\"></button></div></li>"];
-const $$server_module0$2 = server$.createHandler(db.getTodos, "/_m/0dbe216f23/routeData", true);
-server$.registerHandler("/_m/0dbe216f23/routeData", $$server_module0$2);
-const $$server_module1 = server$.createHandler(addTodoFn, "/_m/90d4313cf1/addingTodo", true);
-server$.registerHandler("/_m/90d4313cf1/addingTodo", $$server_module1);
-const $$server_module2 = server$.createHandler(removeTodoFn, "/_m/34a106c003/removingTodo", true);
-server$.registerHandler("/_m/34a106c003/removingTodo", $$server_module2);
-const $$server_module3 = server$.createHandler(toggleAllFn, "/_m/688bbd5a7c/togglingAll", true);
-server$.registerHandler("/_m/688bbd5a7c/togglingAll", $$server_module3);
-const $$server_module4 = server$.createHandler(clearCompletedFn, "/_m/38c1e00a88/fn", true);
-server$.registerHandler("/_m/38c1e00a88/fn", $$server_module4);
-const $$server_module5 = server$.createHandler(toggleTodoFn, "/_m/409aca386a/togglingTodo", true);
-server$.registerHandler("/_m/409aca386a/togglingTodo", $$server_module5);
-const $$server_module6 = server$.createHandler(editTodoFn, "/_m/f4e32d362b/editingTodo", true);
-server$.registerHandler("/_m/f4e32d362b/editingTodo", $$server_module6);
-const TodoApp = () => {
-  const todos = useRouteData();
-  const location = useLocation();
-  const [addingTodo, addTodo] = createRouteMultiAction($$server_module1);
-  const [removingTodo, removeTodo] = createRouteMultiAction($$server_module2);
-  const [togglingAll, toggleAll] = createRouteAction($$server_module3);
-  const [, clearCompleted] = createRouteAction($$server_module4);
-  const [editingTodoId, setEditingId] = createSignal();
-  const setEditing = ({
-    id,
-    pending
-  }) => {
-    if (!pending || !pending()) setEditingId(id);
-  };
-  const remainingCount = createMemo(() => todos().length + addingTodo.pending.length - todos().filter(todo => todo.completed).length - removingTodo.pending.length);
-  const filterList = todos => {
-    if (location.query.show === "active") return todos.filter(todo => !todo.completed);else if (location.query.show === "completed") return todos.filter(todo => todo.completed);else return todos;
-  };
-  let inputRef;
-  return ssr(_tmpl$6, ssrHydrationKey(), escape(createComponent(addTodo.Form, {
-    onSubmit: e => {
-      if (!inputRef.value.trim()) e.preventDefault();
-      setTimeout(() => inputRef.value = "");
-    },
-    get children() {
-      return ssr(_tmpl$$3, ssrHydrationKey());
-    }
-  })), escape(createComponent(Show, {
-    get when() {
-      return todos().length > 0;
-    },
-    get children() {
-      return createComponent(toggleAll.Form, {
-        get children() {
-          return [ssr(_tmpl$2$3, ssrHydrationKey(), ssrAttribute("value", escape(String(!remainingCount()), true), false)), ssr(_tmpl$3$2, ssrHydrationKey(), `toggle-all ${!remainingCount() ? "checked" : ""}`)];
-        }
-      });
-    }
-  })), escape(createComponent(For, {
-    get each() {
-      return filterList(todos());
-    },
-    children: todo => {
-      const [togglingTodo, toggleTodo] = createRouteAction($$server_module5);
-      const [editingTodo, editTodo] = createRouteAction($$server_module6);
-      const title = () => editingTodo.pending ? editingTodo.input.get("title") : todo.title;
-      const pending = () => togglingAll.pending || togglingTodo.pending || editingTodo.pending;
-      const completed = () => togglingAll.pending ? !togglingAll.input.get("completed") : togglingTodo.pending ? !togglingTodo.input.get("completed") : todo.completed;
-      const removing = () => removingTodo.some(data => +data.input.get("id") === todo.id);
-      return createComponent(Show, {
-        get when() {
-          return !removing();
-        },
-        get children() {
-          return ssr(_tmpl$11, ssrHydrationKey(), `todo ${editingTodoId() === todo.id ? "editing" : ""} ${completed() ? "completed" : ""} ${pending() ? "pending" : ""}`, escape(createComponent(toggleTodo.Form, {
-            get children() {
-              return [ssr(_tmpl$7, ssrHydrationKey(), ssrAttribute("value", escape(todo.id, true), false)), ssr(_tmpl$8, ssrHydrationKey(), ssrAttribute("disabled", pending(), true), completed() ? escape(createComponent(CompleteIcon, {})) : escape(createComponent(IncompleteIcon, {})))];
-            }
-          })), escape(title()), escape(createComponent(removeTodo.Form, {
-            get children() {
-              return [ssr(_tmpl$7, ssrHydrationKey(), ssrAttribute("value", escape(todo.id, true), false)), ssr(_tmpl$9, ssrHydrationKey())];
-            }
-          })), escape(createComponent(Show, {
-            get when() {
-              return editingTodoId() === todo.id;
-            },
-            get children() {
-              return createComponent(editTodo.Form, {
-                onSubmit: () => setEditing({}),
-                get children() {
-                  return [ssr(_tmpl$7, ssrHydrationKey(), ssrAttribute("value", escape(todo.id, true), false)), ssr(_tmpl$10, ssrHydrationKey(), ssrAttribute("value", escape(todo.title, true), false))];
-                }
-              });
-            }
-          })));
-        }
-      });
-    }
-  })), escape(createComponent(For, {
-    each: addingTodo,
-    children: sub => ssr(_tmpl$12, ssrHydrationKey(), escape(sub.input.get("title")))
-  })), escape(createComponent(Show, {
-    get when() {
-      return todos().length || addingTodo.pending.length;
-    },
-    get children() {
-      return ssr(_tmpl$5, ssrHydrationKey(), escape(remainingCount()), remainingCount() === 1 ? " item " : " items ", escape(createComponent(A, {
-        href: "?show=all",
-        get classList() {
-          return {
-            selected: !location.query.show || location.query.show === "all"
-          };
-        },
-        children: "All"
-      })), escape(createComponent(A, {
-        href: "?show=active",
-        get classList() {
-          return {
-            selected: location.query.show === "active"
-          };
-        },
-        children: "Active"
-      })), escape(createComponent(A, {
-        href: "?show=completed",
-        get classList() {
-          return {
-            selected: location.query.show === "completed"
-          };
-        },
-        children: "Completed"
-      })), escape(createComponent(Show, {
-        get when() {
-          return remainingCount() !== todos.length;
-        },
-        get children() {
-          return createComponent(clearCompleted.Form, {
-            get children() {
-              return ssr(_tmpl$4, ssrHydrationKey());
-            }
-          });
-        }
-      })));
-    }
-  })));
-};
-async function addTodoFn(form) {
-  await db.addTodo(form.get("title"));
-  return redirect("/");
-}
-async function removeTodoFn(form) {
-  await db.removeTodo(Number(form.get("id")));
-  return redirect("/");
-}
-async function toggleAllFn(form) {
-  await db.toggleAll(form.get("completed") === "true");
-  return redirect("/");
-}
-async function clearCompletedFn(form) {
-  await db.clearCompleted();
-  return redirect("/");
-}
-async function toggleTodoFn(form) {
-  await db.toggleTodo(Number(form.get("id")));
-  return redirect("/");
-}
-async function editTodoFn(form) {
-  await db.editTodo(Number(form.get("id")), String(form.get("title")));
-  return redirect("/");
-}
+const Meta$1 = (props) => MetaTag("meta", props);
 
 const BASE_PATH = "https://chat.johannes-jahn.com".replace(/\/+$/, "");
 class Configuration {
@@ -3534,7 +2881,7 @@ function PostResponseDTOFromJSONTyped(json, ignoreDiscriminator) {
     "content": json["content"],
     "contentType": json["contentType"],
     "author": UserResponseDTOFromJSON(json["author"]),
-    "comments": json["comments"].map(CommentResponseDTOFromJSON)
+    "comments": json["comments"] === null ? null : json["comments"].map(CommentResponseDTOFromJSON)
   };
 }
 
@@ -3968,37 +3315,145 @@ class PostApi extends BaseAPI {
   }
 }
 
-const _tmpl$$2 = ["<p", " class=\"contents\">", "</p>"],
-  _tmpl$2$2 = ["<img", " class=\"postImage\"", ">"],
-  _tmpl$3$1 = ["<div", " class=\"card bg-base-200 shadow-xl m-5 postSize\"><div class=\"card-body flex flex-col justify-center items-center\"><!--#-->", "<!--/--><!--#-->", "<!--/--></div><div class=\"flex flex-row items-center justify-end m-2\"><div class=\"avatar\"><div class=\"w-10 rounded-full\"><img src=\"", "\"></div></div><p class=\"text-xs m-2\"><!--#-->", "<!--/-->, <!--#-->", "<!--/--></p></div></div>"];
+var _tmpl$$4 = ["<p", ' class="contents">', "</p>"], _tmpl$2$3 = ["<img", ' class="postImage"', ">"], _tmpl$3$3 = ["<div", ' class="card bg-base-200 shadow-xl m-5 postSize"><div class="card-body flex flex-col justify-center items-center"><!--$-->', "<!--/--><!--$-->", '<!--/--></div><div class="flex flex-row items-center justify-end m-2"><div class="avatar"><div class="w-10 rounded-full"><img', '></div></div><p class="text-xs m-2"><!--$-->', "<!--/-->, <!--$-->", "<!--/--></p></div></div>"];
 const PostComponent = ({
   post
 }) => {
-  return ssr(_tmpl$3$1, ssrHydrationKey(), escape(createComponent(Show, {
+  return ssr(_tmpl$3$3, ssrHydrationKey(), escape(createComponent(Show, {
     get when() {
       return post.contentType == "TEXT";
     },
     get children() {
-      return ssr(_tmpl$$2, ssrHydrationKey(), escape(post.content));
+      return ssr(_tmpl$$4, ssrHydrationKey(), escape(post.content));
     }
   })), escape(createComponent(Show, {
     get when() {
       return post.contentType == "IMAGE_URL";
     },
     get children() {
-      return ssr(_tmpl$2$2, ssrHydrationKey(), ssrAttribute("src", escape(post.content, true), false));
+      return ssr(_tmpl$2$3, ssrHydrationKey(), ssrAttribute("src", escape(post.content, true), false));
     }
-  })), escape(BASE_PATH, true) + "/app/user/avatar/" + escape(post.author.id, true), escape(post.author.username), escape(post.createdAt.toLocaleDateString()));
+  })), ssrAttribute("src", escape(BASE_PATH, true) + "/app/user/avatar/" + escape(post.author.id, true), false), escape(post.author.username), escape(post.createdAt.toLocaleDateString()));
 };
 
 const $$server_module0$1 = server$.createHandler(async function $$serverHandler0() {
   return new PostApi().postControllerGetPosts();
-}, "/_m/0dfa2eed94/routeData", true);
-server$.registerHandler("/_m/0dfa2eed94/routeData", $$server_module0$1);
+}, "/_m/0dbe216f23/routeData", true);
+server$.registerHandler("/_m/0dbe216f23/routeData", $$server_module0$1);
 const routeData = () => createRouteData($$server_module0$1);
 
+var _tmpl$$3 = ["<div", ' style="', '"><div style="', '"><p style="', '" id="error-message">', '</p><button id="reset-errors" style="', '">Clear errors and retry</button><pre style="', '">', "</pre></div></div>"];
+function ErrorBoundary(props) {
+  return createComponent(ErrorBoundary$1, {
+    fallback: (e, reset) => {
+      return createComponent(Show, {
+        get when() {
+          return !props.fallback;
+        },
+        get fallback() {
+          return props.fallback && props.fallback(e, reset);
+        },
+        get children() {
+          return createComponent(ErrorMessage, {
+            error: e
+          });
+        }
+      });
+    },
+    get children() {
+      return props.children;
+    }
+  });
+}
+function ErrorMessage(props) {
+  return ssr(_tmpl$$3, ssrHydrationKey(), "padding:16px", "background-color:rgba(252, 165, 165);color:rgb(153, 27, 27);border-radius:5px;overflow:scroll;padding:16px;margin-bottom:8px", "font-weight:bold", escape(props.error.message), "color:rgba(252, 165, 165);background-color:rgb(153, 27, 27);border-radius:5px;padding:4px 8px", "margin-top:8px;width:100%", escape(props.error.stack));
+}
+
+const routeLayouts = {
+  "/": {
+    "id": "/",
+    "layouts": []
+  }
+};
+
+var _tmpl$$2 = ["<link", ' rel="stylesheet"', ">"], _tmpl$2$2 = ["<link", ' rel="modulepreload"', ">"];
+function flattenIslands(match, manifest) {
+  let result = [...match];
+  match.forEach((m) => {
+    if (m.type !== "island")
+      return;
+    const islandManifest = manifest[m.href];
+    if (islandManifest) {
+      const res = flattenIslands(islandManifest.assets, manifest);
+      result.push(...res);
+    }
+  });
+  return result;
+}
+function getAssetsFromManifest(manifest, routerContext) {
+  let match = routerContext.matches ? routerContext.matches.reduce((memo, m) => {
+    if (m.length) {
+      const fullPath = m.reduce((previous, match2) => previous + match2.originalPath, "");
+      const route = routeLayouts[fullPath];
+      if (route) {
+        memo.push(...manifest[route.id] || []);
+        const layoutsManifestEntries = route.layouts.flatMap((manifestKey) => manifest[manifestKey] || []);
+        memo.push(...layoutsManifestEntries);
+      }
+    }
+    return memo;
+  }, []) : [];
+  match.push(...manifest["entry-client"] || []);
+  match = manifest ? flattenIslands(match, manifest) : [];
+  const links = match.reduce((r, src) => {
+    r[src.href] = src.type === "style" ? ssr(_tmpl$$2, ssrHydrationKey(), ssrAttribute("href", escape(src.href, true), false)) : src.type === "script" ? ssr(_tmpl$2$2, ssrHydrationKey(), ssrAttribute("href", escape(src.href, true), false)) : void 0;
+    return r;
+  }, {});
+  return Object.values(links);
+}
+function Links() {
+  const context = useContext(ServerContext);
+  useAssets(() => getAssetsFromManifest(context.env.manifest, context.routerContext));
+  return null;
+}
+
+function Meta() {
+  const context = useContext(ServerContext);
+  useAssets(() => ssr(renderTags(context.tags)));
+  return null;
+}
+
+var _tmpl$3$2 = ["<script", ' type="module" async', "><\/script>"];
+const isDev = "production" === "development";
+const isIslands = false;
+function Scripts() {
+  const context = useContext(ServerContext);
+  return [createComponent(HydrationScript, {}), isIslands , createComponent(NoHydration, {
+    get children() {
+      return ((                ssr(_tmpl$3$2, ssrHydrationKey(), ssrAttribute("src", escape(context.env.manifest["entry-client"][0].href, true), false))
+      ) );
+    }
+  }), isDev ];
+}
+
+function Html(props) {
+  {
+    return ssrElement("html", props, void 0, false);
+  }
+}
+function Head(props) {
+  {
+    return ssrElement("head", props, () => [escape(props.children), createComponent(Meta, {}), createComponent(Links, {})], false);
+  }
+}
+function Body(props) {
+  {
+    return ssrElement("body", props, () => escape(props.children) , false);
+  }
+}
+
 const MeContext = createContext();
-const MeProvider = props => {
+const MeProvider = (props) => {
   const signal = createSignal(null);
   return createComponent(MeContext.Provider, {
     value: signal,
@@ -4011,12 +3466,10 @@ const useMe = () => {
   return useContext(MeContext);
 };
 
-const _tmpl$$1 = ["<div", " class=\"flex flex-row gap-4 m-4 h-11\"><input type=\"text\" placeholder=\"Username\" class=\"input w-full max-w-xs\"><input type=\"password\" placeholder=\"Password\" class=\"input w-full max-w-xs\"><button class=\"btn\">Login</button></div>"],
-  _tmpl$2$1 = ["<div", " class=\"avatar m-4 h-11\"><div class=\"w-10 rounded-full\"><img src=\"", "\"></div></div>"],
-  _tmpl$3 = ["<div", " class=\"flex flex-row justify-between items-center\"><div class=\"m-4 text-xl\">Solid Nacho</div><!--#-->", "<!--/--><!--#-->", "<!--/--></div>"];
+var _tmpl$$1 = ["<div", ' class="flex flex-row gap-4 m-4 h-11"><input type="text" placeholder="Username" class="input w-full max-w-xs"><input type="password" placeholder="Password" class="input w-full max-w-xs"><button class="btn">Login</button></div>'], _tmpl$2$1 = ["<div", ' class="avatar m-4 h-11"><div class="w-10 rounded-full"><img', "></div></div>"], _tmpl$3$1 = ["<div", ' class="flex flex-row justify-between items-center"><div class="m-4 text-xl">Solid Nacho</div><!--$-->', "<!--/--><!--$-->", "<!--/--></div>"];
 const HeaderComponent = () => {
   const [me, setMe] = useMe();
-  return ssr(_tmpl$3, ssrHydrationKey(), escape(createComponent(Show, {
+  return ssr(_tmpl$3$1, ssrHydrationKey(), escape(createComponent(Show, {
     get when() {
       return me() == null;
     },
@@ -4028,13 +3481,13 @@ const HeaderComponent = () => {
       return me() != null;
     },
     get children() {
-      return ssr(_tmpl$2$1, ssrHydrationKey(), escape(BASE_PATH, true) + "/app/user/avatar/" + escape(me().id, true));
+      return ssr(_tmpl$2$1, ssrHydrationKey(), ssrAttribute("src", escape(BASE_PATH, true) + "/app/user/avatar/" + escape(me().id, true), false));
     }
   })));
 };
 
 const PostContext = createContext();
-const PostProvider = props => {
+const PostProvider = (props) => {
   const store = createStore(props.initial);
   return createComponent(PostContext.Provider, {
     value: store,
@@ -4047,19 +3500,19 @@ const usePost = () => {
   return useContext(PostContext);
 };
 
-const _tmpl$ = ["<div", " class=\"flex flex-col justify-center items-center\">", "</div>"],
-  _tmpl$2 = ["<div", " class=\"w-full sticky bottom-0 flex flex-row-reverse\"><div class=\"btn btn-circle m-10\">+</div></div>"];
+var _tmpl$ = ["<div", ' class="flex flex-col justify-center items-center">', "</div>"], _tmpl$2 = ["<div", ' class="w-full sticky bottom-0 flex flex-row-reverse"><div class="btn btn-circle m-10">+</div></div>'], _tmpl$3 = ["<div", ' class="', '"><div class="modal-box"><h3 class="font-bold text-lg m-5">Create Post</h3><textarea placeholder="Content" class="input w-full"></textarea><div class="modal-action"><label class="btn btn-error">Cancel</label><label class="btn btn-primary">Create</label></div></div></div>'];
 const PostsContainerComponent = () => {
   const [posts, setPosts] = usePost();
+  const [showModal, setShowModal] = createSignal(false);
   return [ssr(_tmpl$, ssrHydrationKey(), escape(createComponent(For, {
     each: posts,
-    children: post => createComponent(PostComponent, {
-      post: post
+    children: (post) => createComponent(PostComponent, {
+      post
     })
-  }))), ssr(_tmpl$2, ssrHydrationKey())];
+  }))), ssr(_tmpl$2, ssrHydrationKey()), ssr(_tmpl$3, ssrHydrationKey(), `modal modal-bottom sm:modal-middle ${showModal() ? "modal-open" : ""}`)];
 };
 
-const TestComponent = () => {
+const NachoApp = () => {
   const items = useRouteData();
   return createComponent(MeProvider, {
     get children() {
@@ -4076,25 +3529,14 @@ const TestComponent = () => {
 };
 const $$server_module0 = server$.createHandler(async function $$serverHandler0() {
   return new PostApi().postControllerGetPosts();
-}, "/_m/0dfa2eed94/routeData", true);
-server$.registerHandler("/_m/0dfa2eed94/routeData", $$server_module0);
-
-/// <reference path="../server/types.tsx" />
+}, "/_m/0dbe216f23/routeData", true);
+server$.registerHandler("/_m/0dbe216f23/routeData", $$server_module0);
 
 const fileRoutes = [{
-  data: routeData$1,
-  component: TodoApp,
-  path: "/"
-}, {
   data: routeData,
-  component: TestComponent,
-  path: "/test"
+  component: NachoApp,
+  path: "/"
 }];
-
-/**
- * Routes are the file system based routes, used by Solid App Router to show the current page according to the URL.
- */
-
 const FileRoutes = () => {
   return fileRoutes;
 };
@@ -4136,25 +3578,17 @@ function Root() {
 const rootData = Object.values(/* #__PURE__ */ Object.assign({
 
 }))[0];
-const dataFn = rootData ? rootData.default : undefined;
-
-/** Function responsible for listening for streamed [operations]{@link Operation}. */
-
-/** Input parameters for to an Exchange factory function. */
-
-/** Function responsible for receiving an observable [operation]{@link Operation} and returning a [result]{@link OperationResult}. */
-
-/** This composes an array of Exchanges into a single ExchangeIO function */
-const composeMiddleware = exchanges => ({
+const dataFn = rootData ? rootData.default : void 0;
+const composeMiddleware = (exchanges) => ({
   forward
-}) => exchanges.reduceRight((forward, exchange) => exchange({
-  forward
+}) => exchanges.reduceRight((forward2, exchange) => exchange({
+  forward: forward2
 }), forward);
 function createHandler(...exchanges) {
   const exchange = composeMiddleware(exchanges);
-  return async event => {
+  return async (event) => {
     return await exchange({
-      forward: async op => {
+      forward: async (op) => {
         return new Response(null, {
           status: 404
         });
@@ -4171,8 +3605,6 @@ function StartServer({
 }) {
   const parsed = new URL(event.request.url);
   const path = parsed.pathname + parsed.search;
-
-  // @ts-ignore
   sharedConfig.context.requestContext = event;
   return createComponent(ServerContext.Provider, {
     value: event,
@@ -4203,8 +3635,8 @@ function StartServer({
   });
 }
 
-const entryServer = createHandler(renderAsync(event => createComponent(StartServer, {
-  event: event
+const entryServer = createHandler(renderAsync((event) => createComponent(StartServer, {
+  event
 })));
 
 const onRequestGet = async ({ request, next, env }) => {
