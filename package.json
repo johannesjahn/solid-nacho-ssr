@@ -11,7 +11,7 @@
     "autoprefixer": "^10.4.14",
     "csstype": "3.1.0",
     "esbuild": "^0.14.54",
-    "postcss": "^8.4.23",
+    "postcss": "^8.4.40",
     "rollup": "^3.10.0",
     "solid-start-cloudflare-pages": "^0.2.26",
     "solid-start-node": "^0.2.19",
