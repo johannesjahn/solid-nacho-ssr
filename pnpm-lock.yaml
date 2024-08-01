@@ -22,7 +22,7 @@ importers:
         version: 1.8.19
       solid-start:
         specifier: ^0.2.26
-        version: 0.2.32(@solidjs/meta@0.28.7(solid-js@1.8.19))(@solidjs/router@0.8.4(solid-js@1.8.19))(solid-js@1.8.19)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.2.32)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
+        version: 0.2.32(@solidjs/meta@0.28.7(solid-js@1.8.19))(@solidjs/router@0.8.4(solid-js@1.8.19))(solid-js@1.8.19)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.3.11)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
       undici:
         specifier: ^5.15.1
         version: 5.28.4
@@ -49,8 +49,8 @@ importers:
         specifier: ^0.2.26
         version: 0.2.32(cron-schedule@3.0.6)(solid-start@0.2.32)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
       solid-start-node:
-        specifier: ^0.2.19
-        version: 0.2.32(solid-start@0.2.32)(undici@5.28.4)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
+        specifier: ^0.3.11
+        version: 0.3.11(solid-start@0.2.32)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
       tailwindcss:
         specifier: ^3.3.2
         version: 3.4.7
@@ -2402,11 +2402,10 @@ packages:
       solid-start: '*'
       vite: '*'
 
-  solid-start-node@0.2.32:
-    resolution: {integrity: sha512-IG7V5O7rdesVPQQ15eDpdJ9wg1XXFT7zpd+o0M7ShW9TvxPxs0g5RJzZFNjSxwx8nmxVj58mO5lGw2Jr/HgLCQ==}
+  solid-start-node@0.3.11:
+    resolution: {integrity: sha512-6u6DtiMrmbxwZOL3It63i7YH1pfkxS4YLsplAzBLCCdzr38PznjEANfH82jH3FRydpGeG8R2+5gDzT6tq35tMQ==}
     peerDependencies:
       solid-start: '*'
-      undici: ^5.8.0
       vite: '*'
 
   solid-start@0.2.32:
@@ -5105,7 +5104,7 @@ snapshots:
       '@types/ws': 8.5.12
       miniflare: 2.14.2(cron-schedule@3.0.6)
       rollup: 3.29.4
-      solid-start: 0.2.32(@solidjs/meta@0.28.7(solid-js@1.8.19))(@solidjs/router@0.8.4(solid-js@1.8.19))(solid-js@1.8.19)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.2.32)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
+      solid-start: 0.2.32(@solidjs/meta@0.28.7(solid-js@1.8.19))(@solidjs/router@0.8.4(solid-js@1.8.19))(solid-js@1.8.19)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.3.11)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
       terser: 5.31.3
       vite: 4.5.3(@types/node@22.0.2)(terser@5.31.3)
       ws: 8.18.0
@@ -5116,7 +5115,7 @@ snapshots:
       - ioredis
       - utf-8-validate
 
-  solid-start-node@0.2.32(solid-start@0.2.32)(undici@5.28.4)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3)):
+  solid-start-node@0.3.11(solid-start@0.2.32)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3)):
     dependencies:
       '@rollup/plugin-commonjs': 24.1.0(rollup@3.29.4)
       '@rollup/plugin-json': 6.1.0(rollup@3.29.4)
@@ -5125,14 +5124,13 @@ snapshots:
       polka: 1.0.0-next.22
       rollup: 3.29.4
       sirv: 2.0.4
-      solid-start: 0.2.32(@solidjs/meta@0.28.7(solid-js@1.8.19))(@solidjs/router@0.8.4(solid-js@1.8.19))(solid-js@1.8.19)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.2.32)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
+      solid-start: 0.2.32(@solidjs/meta@0.28.7(solid-js@1.8.19))(@solidjs/router@0.8.4(solid-js@1.8.19))(solid-js@1.8.19)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.3.11)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
       terser: 5.31.3
-      undici: 5.28.4
       vite: 4.5.3(@types/node@22.0.2)(terser@5.31.3)
     transitivePeerDependencies:
       - supports-color
 
-  solid-start@0.2.32(@solidjs/meta@0.28.7(solid-js@1.8.19))(@solidjs/router@0.8.4(solid-js@1.8.19))(solid-js@1.8.19)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.2.32)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3)):
+  solid-start@0.2.32(@solidjs/meta@0.28.7(solid-js@1.8.19))(@solidjs/router@0.8.4(solid-js@1.8.19))(solid-js@1.8.19)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.3.11)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3)):
     dependencies:
       '@babel/core': 7.25.2
       '@babel/generator': 7.25.0
@@ -5172,7 +5170,7 @@ snapshots:
       wait-on: 6.0.1(debug@4.3.6)
     optionalDependencies:
       solid-start-cloudflare-pages: 0.2.32(cron-schedule@3.0.6)(solid-start@0.2.32)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
-      solid-start-node: 0.2.32(solid-start@0.2.32)(undici@5.28.4)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
+      solid-start-node: 0.3.11(solid-start@0.2.32)(vite@4.5.3(@types/node@22.0.2)(terser@5.31.3))
     transitivePeerDependencies:
       - '@nuxt/kit'
       - '@testing-library/jest-dom'
