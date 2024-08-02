@@ -25,7 +25,7 @@
     "daisyui": "^4.12.10",
     "solid-js": "^1.7.2",
     "solid-start": "^0.2.26",
-    "undici": "^5.15.1"
+    "undici": "^6.19.5"
   },
   "engines": {
     "node": ">=16"
