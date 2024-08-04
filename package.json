@@ -7,24 +7,24 @@
   },
   "type": "module",
   "devDependencies": {
-    "@types/node": "^22.0.2",
-    "autoprefixer": "^10.4.14",
+    "@types/node": "^22.1.0",
+    "autoprefixer": "^10.4.20",
     "csstype": "3.1.3",
     "esbuild": "^0.23.0",
-    "postcss": "^8.4.23",
-    "rollup": "^4.19.2",
+    "postcss": "^8.4.40",
+    "rollup": "^4.20.0",
     "solid-start-cloudflare-pages": "^0.3.11",
     "solid-start-node": "^0.3.11",
-    "tailwindcss": "^3.3.2",
+    "tailwindcss": "^3.4.7",
     "typescript": "^5.5.4",
-    "vite": "^4.1.4"
+    "vite": "^4.5.3"
   },
   "dependencies": {
-    "@solidjs/meta": "^0.28.2",
-    "@solidjs/router": "^0.8.2",
+    "@solidjs/meta": "^0.28.7",
+    "@solidjs/router": "^0.8.4",
     "daisyui": "^4.12.10",
-    "solid-js": "^1.7.2",
-    "solid-start": "^0.2.26",
+    "solid-js": "^1.8.19",
+    "solid-start": "^0.2.32",
     "undici": "^6.19.5"
   },
   "engines": {
