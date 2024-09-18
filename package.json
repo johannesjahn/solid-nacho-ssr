@@ -15,7 +15,7 @@
     "rollup": "^4.21.3",
     "solid-start-cloudflare-pages": "^0.2.26",
     "solid-start-node": "^0.3.11",
-    "tailwindcss": "^3.4.11",
+    "tailwindcss": "^3.4.12",
     "typescript": "^5.6.2",
     "vite": "^4.1.4"
   },
