@@ -22,7 +22,7 @@
   "dependencies": {
     "@solidjs/meta": "^0.28.2",
     "@solidjs/router": "^0.8.2",
-    "daisyui": "^4.12.13",
+    "daisyui": "^4.12.14",
     "solid-js": "^1.9.3",
     "solid-start": "^0.2.26",
     "undici": "^6.20.1"
