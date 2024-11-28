@@ -24,8 +24,8 @@ importers:
         specifier: ^0.2.26
         version: 0.2.32(@solidjs/meta@0.28.7(solid-js@1.9.3))(@solidjs/router@0.8.4(solid-js@1.9.3))(solid-js@1.9.3)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.3.11)(vite@4.5.3(@types/node@22.10.0)(terser@5.31.3))
       undici:
-        specifier: ^6.21.0
-        version: 6.21.0
+        specifier: ^7.0.0
+        version: 7.0.0
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
@@ -2585,9 +2585,9 @@ packages:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
     engines: {node: '>=14.0'}
 
-  undici@6.21.0:
-    resolution: {integrity: sha512-BUgJXc752Kou3oOIuU1i+yZZypyZRqNPW0vqoMPl8VaoalSfeR0D8/t4iAS3yirs79SSMTxTag+ZC86uswv+Cw==}
-    engines: {node: '>=18.17'}
+  undici@7.0.0:
+    resolution: {integrity: sha512-c4xi3kWnQJrb7h2q8aJYKvUzmz7boCgz1cUCC6OwdeM5Tr2P0hDuthr2iut4ggqsz+Cnh20U/LoTzbKIdDS/Nw==}
+    engines: {node: '>=20.18.1'}
 
   unicode-canonical-property-names-ecmascript@2.0.0:
     resolution: {integrity: sha512-yY5PpDlfVIU5+y/BSCxAJRBIS1Zc2dDG3Ujq+sR0U+JjUevW2JhocOF+soROYDSaAezOzOKuyyixhD6mBknSmQ==}
@@ -5344,7 +5344,7 @@ snapshots:
     dependencies:
       '@fastify/busboy': 2.1.1
 
-  undici@6.21.0: {}
+  undici@7.0.0: {}
 
   unicode-canonical-property-names-ecmascript@2.0.0: {}
 
