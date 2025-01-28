@@ -24,8 +24,8 @@ importers:
         specifier: ^0.2.26
         version: 0.2.32(@solidjs/meta@0.28.7(solid-js@1.9.4))(@solidjs/router@0.8.4(solid-js@1.9.4))(solid-js@1.9.4)(solid-start-cloudflare-pages@0.2.32)(solid-start-node@0.3.11)(vite@4.5.3(@types/node@22.12.0)(terser@5.31.3))
       undici:
-        specifier: ^7.2.3
-        version: 7.2.3
+        specifier: ^7.3.0
+        version: 7.3.0
     devDependencies:
       '@types/node':
         specifier: ^22.12.0
@@ -2585,12 +2585,12 @@ packages:
     resolution: {integrity: sha512-wh1pHJHnUeQV5Xa8/kyQhO7WFa8M34l026L5P/+2TYiakvGy5Rdc8jWZVyG7ieht/0WgJLEd3kcU5gKx+6GC8w==}
     engines: {node: '>=14.0'}
 
-  undici@5.28.4:
-    resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
+  undici@5.28.5:
+    resolution: {integrity: sha512-zICwjrDrcrUE0pyyJc1I2QzBkLM8FINsgOrt6WjA+BgajVq9Nxu2PbFFXUrAggLfDXlZGZBVZYw7WNV5KiBiBA==}
     engines: {node: '>=14.0'}
 
-  undici@7.2.3:
-    resolution: {integrity: sha512-2oSLHaDalSt2/O/wHA9M+/ZPAOcU2yrSP/cdBYJ+YxZskiPYDSqHbysLSlD7gq3JMqOoJI5O31RVU3BxX/MnAA==}
+  undici@7.3.0:
+    resolution: {integrity: sha512-Qy96NND4Dou5jKoSJ2gm8ax8AJM/Ey9o9mz7KN1bb9GP+G0l20Zw8afxTnY2f4b7hmhn/z8aC2kfArVQlAhFBw==}
     engines: {node: '>=20.18.1'}
 
   unicode-canonical-property-names-ecmascript@2.0.0:
@@ -5210,7 +5210,7 @@ snapshots:
       sirv: 2.0.4
       solid-js: 1.9.4
       terser: 5.31.3
-      undici: 5.28.4
+      undici: 5.28.5
       vite: 4.5.3(@types/node@22.12.0)(terser@5.31.3)
       vite-plugin-inspect: 0.7.42(rollup@3.29.5)(vite@4.5.3(@types/node@22.12.0)(terser@5.31.3))
       vite-plugin-solid: 2.10.2(solid-js@1.9.4)(vite@4.5.3(@types/node@22.12.0)(terser@5.31.3))
@@ -5348,11 +5348,11 @@ snapshots:
     dependencies:
       '@fastify/busboy': 2.1.1
 
-  undici@5.28.4:
+  undici@5.28.5:
     dependencies:
       '@fastify/busboy': 2.1.1
 
-  undici@7.2.3: {}
+  undici@7.3.0: {}
 
   unicode-canonical-property-names-ecmascript@2.0.0: {}
 
