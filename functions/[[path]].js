@@ -2,25 +2,25 @@ var manifest = {
 	"/": [
 	{
 		type: "script",
-		href: "/assets/index-29fa5fec.js"
+		href: "/assets/index-d1d91dfa.js"
 	},
 	{
 		type: "script",
-		href: "/assets/entry-client-fccfd2e7.js"
+		href: "/assets/entry-client-36a46cf4.js"
 	},
 	{
 		type: "style",
-		href: "/assets/entry-client-e9f0c8d5.css"
+		href: "/assets/entry-client-1d28634e.css"
 	}
 ],
 	"entry-client": [
 	{
 		type: "script",
-		href: "/assets/entry-client-fccfd2e7.js"
+		href: "/assets/entry-client-36a46cf4.js"
 	},
 	{
 		type: "style",
-		href: "/assets/entry-client-e9f0c8d5.css"
+		href: "/assets/entry-client-1d28634e.css"
 	}
 ],
 	"index.html": [
@@ -41,7 +41,7 @@ function handleError(err, owner = Owner) {
   try {
     for (const f of fns) f(error);
   } catch (e) {
-    handleError(e, owner && owner.owner || null);
+    handleError(e, (owner && owner.owner) || null);
   }
 }
 const UNOWNED = {
@@ -59,19 +59,23 @@ function createOwner() {
     cleanups: null
   };
   if (Owner) {
-    if (!Owner.owned) Owner.owned = [o];else Owner.owned.push(o);
+    if (!Owner.owned) Owner.owned = [o];
+    else Owner.owned.push(o);
   }
   return o;
 }
 function createRoot(fn, detachedOwner) {
   const owner = Owner,
     current = detachedOwner === undefined ? owner : detachedOwner,
-    root = fn.length === 0 ? UNOWNED : {
-      context: current ? current.context : null,
-      owner: current,
-      owned: null,
-      cleanups: null
-    };
+    root =
+      fn.length === 0
+        ? UNOWNED
+        : {
+            context: current ? current.context : null,
+            owner: current,
+            owned: null,
+            cleanups: null
+          };
   Owner = root;
   let result;
   try {
@@ -84,9 +88,12 @@ function createRoot(fn, detachedOwner) {
   return result;
 }
 function createSignal(value, options) {
-  return [() => value, v => {
-    return value = typeof v === "function" ? v(value) : v;
-  }];
+  return [
+    () => value,
+    v => {
+      return (value = typeof v === "function" ? v(value) : v);
+    }
+  ];
 }
 function createComputed(fn, value) {
   Owner = createOwner();
@@ -130,7 +137,8 @@ function on(deps, fn, options = {}) {
 }
 function onCleanup(fn) {
   if (Owner) {
-    if (!Owner.cleanups) Owner.cleanups = [fn];else Owner.cleanups.push(fn);
+    if (!Owner.cleanups) Owner.cleanups = [fn];
+    else Owner.cleanups.push(fn);
   }
   return fn;
 }
@@ -168,7 +176,9 @@ function createContext(defaultValue) {
   };
 }
 function useContext(context) {
-  return Owner && Owner.context && Owner.context[context.id] !== undefined ? Owner.context[context.id] : context.defaultValue;
+  return Owner && Owner.context && Owner.context[context.id] !== undefined
+    ? Owner.context[context.id]
+    : context.defaultValue;
 }
 function getOwner() {
   return Owner;
@@ -216,6 +226,52 @@ function createProvider(id) {
   };
 }
 
+function escape$1(s, attr) {
+  const t = typeof s;
+  if (t !== "string") {
+    if (t === "function") return escape$1(s());
+    if (Array.isArray(s)) {
+      for (let i = 0; i < s.length; i++) s[i] = escape$1(s[i]);
+      return s;
+    }
+    return s;
+  }
+  const delim = "<";
+  const escDelim = "&lt;";
+  let iDelim = s.indexOf(delim);
+  let iAmp = s.indexOf("&");
+  if (iDelim < 0 && iAmp < 0) return s;
+  let left = 0,
+    out = "";
+  while (iDelim >= 0 && iAmp >= 0) {
+    if (iDelim < iAmp) {
+      if (left < iDelim) out += s.substring(left, iDelim);
+      out += escDelim;
+      left = iDelim + 1;
+      iDelim = s.indexOf(delim, left);
+    } else {
+      if (left < iAmp) out += s.substring(left, iAmp);
+      out += "&amp;";
+      left = iAmp + 1;
+      iAmp = s.indexOf("&", left);
+    }
+  }
+  if (iDelim >= 0) {
+    do {
+      if (left < iDelim) out += s.substring(left, iDelim);
+      out += escDelim;
+      left = iDelim + 1;
+      iDelim = s.indexOf(delim, left);
+    } while (iDelim >= 0);
+  } else
+    while (iAmp >= 0) {
+      if (left < iAmp) out += s.substring(left, iAmp);
+      out += "&amp;";
+      left = iAmp + 1;
+      iAmp = s.indexOf("&", left);
+    }
+  return left < s.length ? out + s.substring(left) : out;
+}
 function resolveSSRNode$1(node) {
   const t = typeof node;
   if (t === "string") return node;
@@ -225,7 +281,7 @@ function resolveSSRNode$1(node) {
     let mapped = "";
     for (let i = 0, len = node.length; i < len; i++) {
       if (typeof prev !== "object" && typeof node[i] !== "object") mapped += `<!--!$-->`;
-      mapped += resolveSSRNode$1(prev = node[i]);
+      mapped += resolveSSRNode$1((prev = node[i]));
     }
     return mapped;
   }
@@ -240,7 +296,8 @@ const sharedConfig = {
     return getContextId(this.context.count);
   },
   getNextContextId() {
-    if (!this.context) throw new Error(`getNextContextId cannot be used under non-hydrating context`);
+    if (!this.context)
+      throw new Error(`getNextContextId cannot be used under non-hydrating context`);
     return getContextId(this.context.count++);
   }
 };
@@ -253,11 +310,13 @@ function setHydrateContext(context) {
   sharedConfig.context = context;
 }
 function nextHydrateContext() {
-  return sharedConfig.context ? {
-    ...sharedConfig.context,
-    id: sharedConfig.getNextContextId(),
-    count: 0
-  } : undefined;
+  return sharedConfig.context
+    ? {
+        ...sharedConfig.context,
+        id: sharedConfig.getNextContextId(),
+        count: 0
+      }
+    : undefined;
 }
 function createUniqueId() {
   return sharedConfig.getNextContextId();
@@ -288,7 +347,11 @@ function For(props) {
 }
 function Show(props) {
   let c;
-  return props.when ? typeof (c = props.children) === "function" ? c(props.keyed ? props.when : () => props.when) : c : props.fallback || "";
+  return props.when
+    ? typeof (c = props.children) === "function"
+      ? c(props.keyed ? props.when : () => props.when)
+      : c
+    : props.fallback || "";
 }
 function ErrorBoundary$1(props) {
   let error,
@@ -309,28 +372,26 @@ function ErrorBoundary$1(props) {
   }
   createMemo(() => {
     clean = Owner;
-    return catchError(() => res = props.children, err => {
-      error = err;
-      !sync && ctx.replace("e" + id, displayFallback);
-      sync = true;
-    });
+    return catchError(
+      () => (res = props.children),
+      err => {
+        error = err;
+        !sync && ctx.replace("e" + id, displayFallback);
+        sync = true;
+      }
+    );
   });
   if (error) return displayFallback();
   sync = false;
   return {
-    t: `<!--!$e${id}-->${resolveSSRNode$1(res)}<!--!$/e${id}-->`
+    t: `<!--!$e${id}-->${resolveSSRNode$1(escape$1(res))}<!--!$/e${id}-->`
   };
 }
 const SuspenseContext = createContext();
 let resourceContext = null;
 function createResource(source, fetcher, options = {}) {
-  if (arguments.length === 2) {
-    if (typeof fetcher === "object") {
-      options = fetcher;
-      fetcher = source;
-      source = true;
-    }
-  } else if (arguments.length === 1) {
+  if (typeof fetcher !== "function") {
+    options = fetcher || {};
     fetcher = source;
     source = true;
   }
@@ -343,13 +404,17 @@ function createResource(source, fetcher, options = {}) {
   if (sharedConfig.context.async && options.ssrLoadFrom !== "initial") {
     resource = sharedConfig.context.resources[id] || (sharedConfig.context.resources[id] = {});
     if (resource.ref) {
-      if (!resource.data && !resource.ref[0].loading && !resource.ref[0].error) resource.ref[1].refetch();
+      if (!resource.data && !resource.ref[0].loading && !resource.ref[0].error)
+        resource.ref[1].refetch();
       return resource.ref;
     }
   }
   const read = () => {
     if (error) throw error;
-    const resolved = options.ssrLoadFrom !== "initial" && sharedConfig.context.async && "data" in sharedConfig.context.resources[id];
+    const resolved =
+      options.ssrLoadFrom !== "initial" &&
+      sharedConfig.context.async &&
+      "data" in sharedConfig.context.resources[id];
     if (!resolved && resourceContext) resourceContext.push(id);
     if (!resolved && read.loading) {
       const ctx = useContext(SuspenseContext);
@@ -370,7 +435,7 @@ function createResource(source, fetcher, options = {}) {
   });
   function load() {
     const ctx = sharedConfig.context;
-    if (!ctx.async) return read.loading = !!(typeof source === "function" ? source() : source);
+    if (!ctx.async) return (read.loading = !!(typeof source === "function" ? source() : source));
     if (ctx.resources && id in ctx.resources && "data" in ctx.resources[id]) {
       value = ctx.resources[id].data;
       return;
@@ -392,21 +457,23 @@ function createResource(source, fetcher, options = {}) {
     if (p != undefined && typeof p === "object" && "then" in p) {
       read.loading = true;
       read.state = "pending";
-      p = p.then(res => {
-        read.loading = false;
-        read.state = "ready";
-        ctx.resources[id].data = res;
-        p = null;
-        notifySuspense(contexts);
-        return res;
-      }).catch(err => {
-        read.loading = false;
-        read.state = "errored";
-        read.error = error = castError(err);
-        p = null;
-        notifySuspense(contexts);
-        throw error;
-      });
+      p = p
+        .then(res => {
+          read.loading = false;
+          read.state = "ready";
+          ctx.resources[id].data = res;
+          p = null;
+          notifySuspense(contexts);
+          return res;
+        })
+        .catch(err => {
+          read.loading = false;
+          read.state = "errored";
+          read.error = error = castError(err);
+          p = null;
+          notifySuspense(contexts);
+          throw error;
+        });
       if (ctx.serialize) ctx.serialize(id, p, options.deferStream);
       return p;
     }
@@ -416,10 +483,13 @@ function createResource(source, fetcher, options = {}) {
     return ctx.resources[id].data;
   }
   if (options.ssrLoadFrom !== "initial") load();
-  return resource.ref = [read, {
-    refetch: load,
-    mutate: v => value = v
-  }];
+  return (resource.ref = [
+    read,
+    {
+      refetch: load,
+      mutate: v => (value = v)
+    }
+  ]);
 }
 function suspenseComplete(c) {
   for (const r of c.resources.values()) {
@@ -444,15 +514,17 @@ function Suspense(props) {
   const ctx = sharedConfig.context;
   const id = sharedConfig.getContextId();
   const o = createOwner();
-  const value = ctx.suspense[id] || (ctx.suspense[id] = {
-    resources: new Map(),
-    completed: () => {
-      const res = runSuspense();
-      if (suspenseComplete(value)) {
-        done(resolveSSRNode$1(res));
+  const value =
+    ctx.suspense[id] ||
+    (ctx.suspense[id] = {
+      resources: new Map(),
+      completed: () => {
+        const res = runSuspense();
+        if (suspenseComplete(value)) {
+          done(resolveSSRNode$1(escape$1(res)));
+        }
       }
-    }
-  });
+    });
   function suspenseError(err) {
     if (!done || !done(undefined, err)) {
       runWithOwner(o.owner, () => {
@@ -466,12 +538,14 @@ function Suspense(props) {
       count: 0
     });
     cleanNode(o);
-    return runWithOwner(o, () => createComponent(SuspenseContext.Provider, {
-      value,
-      get children() {
-        return catchError(() => props.children, suspenseError);
-      }
-    }));
+    return runWithOwner(o, () =>
+      createComponent(SuspenseContext.Provider, {
+        value,
+        get children() {
+          return catchError(() => props.children, suspenseError);
+        }
+      })
+    );
   }
   const res = runSuspense();
   if (suspenseComplete(value)) {
@@ -488,7 +562,9 @@ function Suspense(props) {
         noHydrate: true
       });
       const res = {
-        t: `<template id="pl-${id}"></template>${resolveSSRNode$1(props.fallback)}<!--pl-${id}-->`
+        t: `<template id="pl-${id}"></template>${resolveSSRNode$1(
+          escape$1(props.fallback)
+        )}<!--pl-${id}-->`
       };
       setHydrateContext(ctx);
       return res;
@@ -503,47 +579,81 @@ function Suspense(props) {
   }, suspenseError);
 }
 
-var T=(o=>(o[o.AggregateError=1]="AggregateError",o[o.ArrowFunction=2]="ArrowFunction",o[o.ErrorPrototypeStack=4]="ErrorPrototypeStack",o[o.ObjectAssign=8]="ObjectAssign",o[o.BigIntTypedArray=16]="BigIntTypedArray",o))(T||{});function gr(n){switch(n){case'"':return '\\"';case"\\":return "\\\\";case`
-`:return "\\n";case"\r":return "\\r";case"\b":return "\\b";case"	":return "\\t";case"\f":return "\\f";case"<":return "\\x3C";case"\u2028":return "\\u2028";case"\u2029":return "\\u2029";default:return}}function d$1(n){let e="",r=0,t;for(let s=0,o=n.length;s<o;s++)t=gr(n[s]),t&&(e+=n.slice(r,s)+t,r=s+1);return r===0?e=n:e+=n.slice(r),e}var I$1="__SEROVAL_REFS__",G$1="$R",re=`self.${G$1}`;function hr(n){return n==null?`${re}=${re}||[]`:`(${re}=${re}||{})["${d$1(n)}"]=[]`}function f$1(n,e){if(!n)throw e}var Ve=new Map,R=new Map;function te$1(n){return Ve.has(n)}function Ue(n){return f$1(te$1(n),new ne(n)),Ve.get(n)}typeof globalThis!="undefined"?Object.defineProperty(globalThis,I$1,{value:R,configurable:!0,writable:!1,enumerable:!1}):typeof window!="undefined"?Object.defineProperty(window,I$1,{value:R,configurable:!0,writable:!1,enumerable:!1}):typeof self!="undefined"?Object.defineProperty(self,I$1,{value:R,configurable:!0,writable:!1,enumerable:!1}):typeof global!="undefined"&&Object.defineProperty(global,I$1,{value:R,configurable:!0,writable:!1,enumerable:!1});function Mr(n){return n}function Ke(n,e){for(let r=0,t=e.length;r<t;r++){let s=e[r];n.has(s)||(n.add(s),s.extends&&Ke(n,s.extends));}}function c(n){if(n){let e=new Set;return Ke(e,n),[...e]}}var Le={0:"Symbol.asyncIterator",1:"Symbol.hasInstance",2:"Symbol.isConcatSpreadable",3:"Symbol.iterator",4:"Symbol.match",5:"Symbol.matchAll",6:"Symbol.replace",7:"Symbol.search",8:"Symbol.species",9:"Symbol.split",10:"Symbol.toPrimitive",11:"Symbol.toStringTag",12:"Symbol.unscopables"},oe={[Symbol.asyncIterator]:0,[Symbol.hasInstance]:1,[Symbol.isConcatSpreadable]:2,[Symbol.iterator]:3,[Symbol.match]:4,[Symbol.matchAll]:5,[Symbol.replace]:6,[Symbol.search]:7,[Symbol.species]:8,[Symbol.split]:9,[Symbol.toPrimitive]:10,[Symbol.toStringTag]:11,[Symbol.unscopables]:12},Ye={2:"!0",3:"!1",1:"void 0",0:"null",4:"-0",5:"1/0",6:"-1/0",7:"0/0"};var ie={0:"Error",1:"EvalError",2:"RangeError",3:"ReferenceError",4:"SyntaxError",5:"TypeError",6:"URIError"};function v(n){return {t:2,i:void 0,s:n,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}var N=v(2),b=v(3),ae$1=v(1),le=v(0),qe=v(4),He=v(5),Ze=v(6),Xe=v(7);function ue(n){return n instanceof EvalError?1:n instanceof RangeError?2:n instanceof ReferenceError?3:n instanceof SyntaxError?4:n instanceof TypeError?5:n instanceof URIError?6:0}function Nr(n){let e=ie[ue(n)];return n.name!==e?{name:n.name}:n.constructor.name!==e?{name:n.constructor.name}:{}}function k(n,e){let r=Nr(n),t=Object.getOwnPropertyNames(n);for(let s=0,o=t.length,i;s<o;s++)i=t[s],i!=="name"&&i!=="message"&&(i==="stack"?e&4&&(r=r||{},r[i]=n[i]):(r=r||{},r[i]=n[i]));return r}function de(n){return Object.isFrozen(n)?3:Object.isSealed(n)?2:Object.isExtensible(n)?0:1}function ce(n){switch(n){case Number.POSITIVE_INFINITY:return He;case Number.NEGATIVE_INFINITY:return Ze}return n!==n?Xe:Object.is(n,-0)?qe:{t:0,i:void 0,s:n,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function x$1(n){return {t:1,i:void 0,s:d$1(n),l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function fe(n){return {t:3,i:void 0,s:""+n,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function er(n){return {t:4,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function pe(n,e){return {t:5,i:n,s:e.toISOString(),l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,f:void 0,a:void 0,b:void 0,o:void 0}}function me(n,e){return {t:6,i:n,s:void 0,l:void 0,c:d$1(e.source),m:e.flags,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function ge(n,e){let r=new Uint8Array(e),t=r.length,s=new Array(t);for(let o=0;o<t;o++)s[o]=r[o];return {t:19,i:n,s,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function rr(n,e){return {t:17,i:n,s:oe[e],l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function De(n,e){return {t:18,i:n,s:d$1(Ue(e)),l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function F$1(n,e,r){return {t:25,i:n,s:r,l:void 0,c:d$1(e),m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function Se(n,e,r){return {t:9,i:n,s:void 0,l:e.length,c:void 0,m:void 0,p:void 0,e:void 0,a:r,f:void 0,b:void 0,o:de(e)}}function he(n,e){return {t:21,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:e,b:void 0,o:void 0}}function ye(n,e,r){return {t:15,i:n,s:void 0,l:e.length,c:e.constructor.name,m:void 0,p:void 0,e:void 0,a:void 0,f:r,b:e.byteOffset,o:void 0}}function ve(n,e,r){return {t:16,i:n,s:void 0,l:e.length,c:e.constructor.name,m:void 0,p:void 0,e:void 0,a:void 0,f:r,b:e.byteOffset,o:void 0}}function Ne(n,e,r){return {t:20,i:n,s:void 0,l:e.byteLength,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:r,b:e.byteOffset,o:void 0}}function be(n,e,r){return {t:13,i:n,s:ue(e),l:void 0,c:void 0,m:d$1(e.message),p:r,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function xe(n,e,r){return {t:14,i:n,s:ue(e),l:void 0,c:void 0,m:d$1(e.message),p:r,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}function Ae(n,e,r){return {t:7,i:n,s:void 0,l:e,c:void 0,m:void 0,p:void 0,e:void 0,a:r,f:void 0,b:void 0,o:void 0}}function V$1(n,e){return {t:28,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[n,e],f:void 0,b:void 0,o:void 0}}function D(n,e){return {t:30,i:void 0,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[n,e],f:void 0,b:void 0,o:void 0}}function B$1(n,e,r){return {t:31,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:r,f:e,b:void 0,o:void 0}}function Ie(n,e){return {t:32,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:e,b:void 0,o:void 0}}function Re(n,e){return {t:33,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:e,b:void 0,o:void 0}}function Ee(n,e){return {t:34,i:n,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:e,b:void 0,o:void 0}}var{toString:Be}=Object.prototype;function br(n,e){return e instanceof Error?`Seroval caught an error during the ${n} process.
+var F$1=(i=>(i[i.AggregateError=1]="AggregateError",i[i.ArrowFunction=2]="ArrowFunction",i[i.ErrorPrototypeStack=4]="ErrorPrototypeStack",i[i.ObjectAssign=8]="ObjectAssign",i[i.BigIntTypedArray=16]="BigIntTypedArray",i[i.AbortSignal=32]="AbortSignal",i))(F$1||{});function yr(o){switch(o){case'"':return '\\"';case"\\":return "\\\\";case`
+`:return "\\n";case"\r":return "\\r";case"\b":return "\\b";case"	":return "\\t";case"\f":return "\\f";case"<":return "\\x3C";case"\u2028":return "\\u2028";case"\u2029":return "\\u2029";default:return}}function p$1(o){let e="",r=0,s;for(let n=0,a=o.length;n<a;n++)s=yr(o[n]),s&&(e+=o.slice(r,n)+s,r=n+1);return r===0?e=o:e+=o.slice(r),e}var E$1="__SEROVAL_REFS__",Z$1="$R",oe=`self.${Z$1}`;function Nr(o){return o==null?`${oe}=${oe}||[]`:`(${oe}=${oe}||{})["${p$1(o)}"]=[]`}function m$1(o,e){if(!o)throw e}var Be=new Map,R=new Map;function ne(o){return Be.has(o)}function We(o){return m$1(ne(o),new ae$1(o)),Be.get(o)}typeof globalThis!="undefined"?Object.defineProperty(globalThis,E$1,{value:R,configurable:!0,writable:!1,enumerable:!1}):typeof window!="undefined"?Object.defineProperty(window,E$1,{value:R,configurable:!0,writable:!1,enumerable:!1}):typeof self!="undefined"?Object.defineProperty(self,E$1,{value:R,configurable:!0,writable:!1,enumerable:!1}):typeof global!="undefined"&&Object.defineProperty(global,E$1,{value:R,configurable:!0,writable:!1,enumerable:!1});function Wr(o){return o}function Je(o,e){for(let r=0,s=e.length;r<s;r++){let n=e[r];o.has(n)||(o.add(n),n.extends&&Je(o,n.extends));}}function f$1(o){if(o){let e=new Set;return Je(e,o),[...e]}}var $e={0:"Symbol.asyncIterator",1:"Symbol.hasInstance",2:"Symbol.isConcatSpreadable",3:"Symbol.iterator",4:"Symbol.match",5:"Symbol.matchAll",6:"Symbol.replace",7:"Symbol.search",8:"Symbol.species",9:"Symbol.split",10:"Symbol.toPrimitive",11:"Symbol.toStringTag",12:"Symbol.unscopables"},le={[Symbol.asyncIterator]:0,[Symbol.hasInstance]:1,[Symbol.isConcatSpreadable]:2,[Symbol.iterator]:3,[Symbol.match]:4,[Symbol.matchAll]:5,[Symbol.replace]:6,[Symbol.search]:7,[Symbol.species]:8,[Symbol.split]:9,[Symbol.toPrimitive]:10,[Symbol.toStringTag]:11,[Symbol.unscopables]:12},qe={2:"!0",3:"!1",1:"void 0",0:"null",4:"-0",5:"1/0",6:"-1/0",7:"0/0"};var ce={0:"Error",1:"EvalError",2:"RangeError",3:"ReferenceError",4:"SyntaxError",5:"TypeError",6:"URIError"},t=void 0;function u$1(o,e,r,s,n,a,i,l,c,d,h,H){return {t:o,i:e,s:r,l:s,c:n,m:a,p:i,e:l,a:c,f:d,b:h,o:H}}function A$1(o){return u$1(2,t,o,t,t,t,t,t,t,t,t,t)}var x$1=A$1(2),I$1=A$1(3),ue=A$1(1),de=A$1(0),Xe=A$1(4),Qe=A$1(5),er=A$1(6),rr=A$1(7);function pe(o){return o instanceof EvalError?1:o instanceof RangeError?2:o instanceof ReferenceError?3:o instanceof SyntaxError?4:o instanceof TypeError?5:o instanceof URIError?6:0}function xr(o){let e=ce[pe(o)];return o.name!==e?{name:o.name}:o.constructor.name!==e?{name:o.constructor.name}:{}}function V$1(o,e){let r=xr(o),s=Object.getOwnPropertyNames(o);for(let n=0,a=s.length,i;n<a;n++)i=s[n],i!=="name"&&i!=="message"&&(i==="stack"?e&4&&(r=r||{},r[i]=o[i]):(r=r||{},r[i]=o[i]));return r}function fe(o){return Object.isFrozen(o)?3:Object.isSealed(o)?2:Object.isExtensible(o)?0:1}function me(o){switch(o){case Number.POSITIVE_INFINITY:return Qe;case Number.NEGATIVE_INFINITY:return er}return o!==o?rr:Object.is(o,-0)?Xe:u$1(0,t,o,t,t,t,t,t,t,t,t,t)}function w(o){return u$1(1,t,p$1(o),t,t,t,t,t,t,t,t,t)}function Se(o){return u$1(3,t,""+o,t,t,t,t,t,t,t,t,t)}function sr(o){return u$1(4,o,t,t,t,t,t,t,t,t,t,t)}function ge(o,e){return u$1(5,o,e.toISOString(),t,t,t,t,t,t,t,t,t)}function he(o,e){return u$1(6,o,t,t,p$1(e.source),e.flags,t,t,t,t,t,t)}function ye(o,e){let r=new Uint8Array(e),s=r.length,n=new Array(s);for(let a=0;a<s;a++)n[a]=r[a];return u$1(19,o,n,t,t,t,t,t,t,t,t,t)}function or(o,e){return u$1(17,o,le[e],t,t,t,t,t,t,t,t,t)}function je(o,e){return u$1(18,o,p$1(We(e)),t,t,t,t,t,t,t,t,t)}function D(o,e,r){return u$1(25,o,r,t,p$1(e),t,t,t,t,t,t,t)}function ve(o,e,r){return u$1(9,o,t,e.length,t,t,t,t,r,t,t,fe(e))}function Ne(o,e){return u$1(21,o,t,t,t,t,t,t,t,e,t,t)}function be(o,e,r){return u$1(15,o,t,e.length,e.constructor.name,t,t,t,t,r,e.byteOffset,t)}function Ae(o,e,r){return u$1(16,o,t,e.length,e.constructor.name,t,t,t,t,r,e.byteOffset,t)}function xe(o,e,r){return u$1(20,o,t,e.byteLength,t,t,t,t,t,r,e.byteOffset,t)}function Ie(o,e,r){return u$1(13,o,pe(e),t,t,p$1(e.message),r,t,t,t,t,t)}function we(o,e,r){return u$1(14,o,pe(e),t,t,p$1(e.message),r,t,t,t,t,t)}function Ee(o,e,r){return u$1(7,o,t,e,t,t,t,t,r,t,t,t)}function B$1(o,e){return u$1(28,t,t,t,t,t,t,t,[o,e],t,t,t)}function j(o,e){return u$1(30,t,t,t,t,t,t,t,[o,e],t,t,t)}function _$1(o,e,r){return u$1(31,o,t,t,t,t,t,t,r,e,t,t)}function Re(o,e){return u$1(32,o,t,t,t,t,t,t,t,e,t,t)}function Pe(o,e){return u$1(33,o,t,t,t,t,t,t,t,e,t,t)}function Ce(o,e){return u$1(34,o,t,t,t,t,t,t,t,e,t,t)}var{toString:_e}=Object.prototype;function Ir(o,e){return e instanceof Error?`Seroval caught an error during the ${o} process.
   
 ${e.name}
 ${e.message}
 
 - For more information, please check the "cause" property of this error.
-- If you believe this is an error in Seroval, please submit an issue at https://github.com/lxsmnsyc/seroval/issues/new`:`Seroval caught an error during the ${n} process.
+- If you believe this is an error in Seroval, please submit an issue at https://github.com/lxsmnsyc/seroval/issues/new`:`Seroval caught an error during the ${o} process.
 
-"${Be.call(e)}"
+"${_e.call(e)}"
 
-For more information, please check the "cause" property of this error.`}var q$1=class q extends Error{constructor(r,t){super(br(r,t));this.cause=t;}},j=class extends q$1{constructor(e){super("parsing",e);}},we=class extends q$1{constructor(e){super("serialization",e);}},p$1=class p extends Error{constructor(r){super(`The value ${Be.call(r)} of type "${typeof r}" cannot be parsed/serialized.
+For more information, please check the "cause" property of this error.`}var X$1=class X extends Error{constructor(r,s){super(Ir(r,s));this.cause=s;}},M$1=class M extends X$1{constructor(e){super("parsing",e);}},ze=class extends X$1{constructor(e){super("serialization",e);}},S$1=class S extends Error{constructor(r){super(`The value ${_e.call(r)} of type "${typeof r}" cannot be parsed/serialized.
       
 There are few workarounds for this problem:
 - Transform the value in a way that it can be serialized.
-- If the reference is present on multiple runtimes (isomorphic), you can use the Reference API to map the references.`);this.value=r;}},m$1=class m extends Error{constructor(e){super('Unsupported node type "'+e.t+'".');}},_$1=class _ extends Error{constructor(e){super('Missing plugin for tag "'+e+'".');}},ne=class extends Error{constructor(r){super('Missing reference for the value "'+Be.call(r)+'" of type "'+typeof r+'"');this.value=r;}};var E$1=class E{constructor(e,r){this.value=e;this.replacement=r;}};var tr={},nr={};var sr={0:{},1:{},2:{},3:{},4:{}};function Ce(n){return "__SEROVAL_STREAM__"in n}function M$1(){let n=new Set,e=[],r=!0,t=!0;function s(a){for(let l of n.keys())l.next(a);}function o(a){for(let l of n.keys())l.throw(a);}function i(a){for(let l of n.keys())l.return(a);}return {__SEROVAL_STREAM__:!0,on(a){r&&n.add(a);for(let l=0,u=e.length;l<u;l++){let S=e[l];l===u-1&&!r?t?a.return(S):a.throw(S):a.next(S);}return ()=>{r&&n.delete(a);}},next(a){r&&(e.push(a),s(a));},throw(a){r&&(e.push(a),o(a),r=!1,t=!1,n.clear());},return(a){r&&(e.push(a),i(a),r=!1,t=!0,n.clear());}}}function ze(n){let e=M$1(),r=n[Symbol.asyncIterator]();async function t(){try{let s=await r.next();s.done?e.return(s.value):(e.next(s.value),await t());}catch(s){e.throw(s);}}return t().catch(()=>{}),e}function U(n){let e=[],r=-1,t=-1,s=n[Symbol.iterator]();for(;;)try{let o=s.next();if(e.push(o.value),o.done){t=e.length-1;break}}catch(o){r=e.length,e.push(o);}return {v:e,t:r,d:t}}var W=class{constructor(e){this.marked=new Set;this.plugins=e.plugins,this.features=31^(e.disabledFeatures||0),this.refs=e.refs||new Map;}markRef(e){this.marked.add(e);}isMarked(e){return this.marked.has(e)}getIndexedValue(e){let r=this.refs.get(e);if(r!=null)return this.markRef(r),{type:1,value:er(r)};let t=this.refs.size;return this.refs.set(e,t),{type:0,value:t}}getReference(e){let r=this.getIndexedValue(e);return r.type===1?r:te$1(e)?{type:2,value:De(r.value,e)}:r}getStrictReference(e){f$1(te$1(e),new p$1(e));let r=this.getIndexedValue(e);return r.type===1?r.value:De(r.value,e)}parseFunction(e){return this.getStrictReference(e)}parseWellKnownSymbol(e){let r=this.getReference(e);return r.type!==0?r.value:(f$1(e in oe,new p$1(e)),rr(r.value,e))}parseSpecialReference(e){let r=this.getIndexedValue(sr[e]);return r.type===1?r.value:{t:26,i:r.value,s:e,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:void 0,b:void 0,o:void 0}}parseIteratorFactory(){let e=this.getIndexedValue(tr);return e.type===1?e.value:{t:27,i:e.value,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:this.parseWellKnownSymbol(Symbol.iterator),b:void 0,o:void 0}}parseAsyncIteratorFactory(){let e=this.getIndexedValue(nr);return e.type===1?e.value:{t:29,i:e.value,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[this.parseSpecialReference(1),this.parseWellKnownSymbol(Symbol.asyncIterator)],f:void 0,b:void 0,o:void 0}}createObjectNode(e,r,t,s){return {t:t?11:10,i:e,s:void 0,l:void 0,c:void 0,m:void 0,p:s,e:void 0,a:void 0,f:void 0,b:void 0,o:de(r)}}createMapNode(e,r,t,s){return {t:8,i:e,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:{k:r,v:t,s},a:void 0,f:this.parseSpecialReference(0),b:void 0,o:void 0}}createPromiseConstructorNode(e){return {t:22,i:e,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:void 0,f:this.parseSpecialReference(1),b:void 0,o:void 0}}};var Ar=/^[$A-Z_][0-9A-Z_$]*$/i;function _e(n){let e=n[0];return (e==="$"||e==="_"||e>="A"&&e<="Z"||e>="a"&&e<="z")&&Ar.test(n)}function X$1(n){switch(n.t){case 0:return n.s+"="+n.v;case 2:return n.s+".set("+n.k+","+n.v+")";case 1:return n.s+".add("+n.v+")";case 3:return n.s+".delete("+n.k+")"}}function Ir(n){let e=[],r=n[0];for(let t=1,s=n.length,o,i=r;t<s;t++)o=n[t],o.t===0&&o.v===i.v?r={t:0,s:o.s,k:void 0,v:X$1(r)}:o.t===2&&o.s===i.s?r={t:2,s:X$1(r),k:o.k,v:o.v}:o.t===1&&o.s===i.s?r={t:1,s:X$1(r),k:void 0,v:o.v}:o.t===3&&o.s===i.s?r={t:3,s:X$1(r),k:o.k,v:void 0}:(e.push(r),r=o),i=o;return e.push(r),e}function ur(n){if(n.length){let e="",r=Ir(n);for(let t=0,s=r.length;t<s;t++)e+=X$1(r[t])+",";return e}}var Rr="Object.create(null)",Er="new Set",wr="new Map",Pr="Promise.resolve",Or="Promise.reject",Cr={3:"Object.freeze",2:"Object.seal",1:"Object.preventExtensions",0:void 0},O$1=class O{constructor(e){this.stack=[];this.flags=[];this.assignments=[];this.plugins=e.plugins,this.features=e.features,this.marked=new Set(e.markedRefs);}createFunction(e,r){return this.features&2?(e.length===1?e[0]:"("+e.join(",")+")")+"=>"+(r.startsWith("{")?"("+r+")":r):"function("+e.join(",")+"){return "+r+"}"}createEffectfulFunction(e,r){return this.features&2?(e.length===1?e[0]:"("+e.join(",")+")")+"=>{"+r+"}":"function("+e.join(",")+"){"+r+"}"}markRef(e){this.marked.add(e);}isMarked(e){return this.marked.has(e)}pushObjectFlag(e,r){e!==0&&(this.markRef(r),this.flags.push({type:e,value:this.getRefParam(r)}));}resolveFlags(){let e="";for(let r=0,t=this.flags,s=t.length;r<s;r++){let o=t[r];e+=Cr[o.type]+"("+o.value+"),";}return e}resolvePatches(){let e=ur(this.assignments),r=this.resolveFlags();return e?r?e+r:e:r}createAssignment(e,r){this.assignments.push({t:0,s:e,k:void 0,v:r});}createAddAssignment(e,r){this.assignments.push({t:1,s:this.getRefParam(e),k:void 0,v:r});}createSetAssignment(e,r,t){this.assignments.push({t:2,s:this.getRefParam(e),k:r,v:t});}createDeleteAssignment(e,r){this.assignments.push({t:3,s:this.getRefParam(e),k:r,v:void 0});}createArrayAssign(e,r,t){this.createAssignment(this.getRefParam(e)+"["+r+"]",t);}createObjectAssign(e,r,t){this.createAssignment(this.getRefParam(e)+"."+r,t);}isIndexedValueInStack(e){return e.t===4&&this.stack.includes(e.i)}serializeReference(e){return this.assignIndexedValue(e.i,I$1+'.get("'+e.s+'")')}serializeArrayItem(e,r,t){return r?this.isIndexedValueInStack(r)?(this.markRef(e),this.createArrayAssign(e,t,this.getRefParam(r.i)),""):this.serialize(r):""}serializeArray(e){let r=e.i;if(e.l){this.stack.push(r);let t=e.a,s=this.serializeArrayItem(r,t[0],0),o=s==="";for(let i=1,a=e.l,l;i<a;i++)l=this.serializeArrayItem(r,t[i],i),s+=","+l,o=l==="";return this.stack.pop(),this.pushObjectFlag(e.o,e.i),this.assignIndexedValue(r,"["+s+(o?",]":"]"))}return this.assignIndexedValue(r,"[]")}serializeProperty(e,r,t){if(typeof r=="string"){let s=Number(r),o=s>=0&&s.toString()===r||_e(r);if(this.isIndexedValueInStack(t)){let i=this.getRefParam(t.i);return this.markRef(e.i),o&&s!==s?this.createObjectAssign(e.i,r,i):this.createArrayAssign(e.i,o?r:'"'+r+'"',i),""}return (o?r:'"'+r+'"')+":"+this.serialize(t)}return "["+this.serialize(r)+"]:"+this.serialize(t)}serializeProperties(e,r){let t=r.s;if(t){let s=r.k,o=r.v;this.stack.push(e.i);let i=this.serializeProperty(e,s[0],o[0]);for(let a=1,l=i;a<t;a++)l=this.serializeProperty(e,s[a],o[a]),i+=(l&&i&&",")+l;return this.stack.pop(),"{"+i+"}"}return "{}"}serializeObject(e){return this.pushObjectFlag(e.o,e.i),this.assignIndexedValue(e.i,this.serializeProperties(e,e.p))}serializeWithObjectAssign(e,r,t){let s=this.serializeProperties(e,r);return s!=="{}"?"Object.assign("+t+","+s+")":t}serializeStringKeyAssignment(e,r,t,s){let o=this.serialize(s),i=Number(t),a=i>=0&&i.toString()===t||_e(t);if(this.isIndexedValueInStack(s))a&&i!==i?this.createObjectAssign(e.i,t,o):this.createArrayAssign(e.i,a?t:'"'+t+'"',o);else {let l=this.assignments;this.assignments=r,a&&i!==i?this.createObjectAssign(e.i,t,o):this.createArrayAssign(e.i,a?t:'"'+t+'"',o),this.assignments=l;}}serializeAssignment(e,r,t,s){if(typeof t=="string")this.serializeStringKeyAssignment(e,r,t,s);else {let o=this.stack;this.stack=[];let i=this.serialize(s);this.stack=o;let a=this.assignments;this.assignments=r,this.createArrayAssign(e.i,this.serialize(t),i),this.assignments=a;}}serializeAssignments(e,r){let t=r.s;if(t){let s=[],o=r.k,i=r.v;this.stack.push(e.i);for(let a=0;a<t;a++)this.serializeAssignment(e,s,o[a],i[a]);return this.stack.pop(),ur(s)}}serializeDictionary(e,r){if(e.p)if(this.features&8)r=this.serializeWithObjectAssign(e,e.p,r);else {this.markRef(e.i);let t=this.serializeAssignments(e,e.p);if(t)return "("+this.assignIndexedValue(e.i,r)+","+t+this.getRefParam(e.i)+")"}return this.assignIndexedValue(e.i,r)}serializeNullConstructor(e){return this.pushObjectFlag(e.o,e.i),this.serializeDictionary(e,Rr)}serializeDate(e){return this.assignIndexedValue(e.i,'new Date("'+e.s+'")')}serializeRegExp(e){return this.assignIndexedValue(e.i,"/"+e.c+"/"+e.m)}serializeSetItem(e,r){return this.isIndexedValueInStack(r)?(this.markRef(e),this.createAddAssignment(e,this.getRefParam(r.i)),""):this.serialize(r)}serializeSet(e){let r=Er,t=e.l,s=e.i;if(t){let o=e.a;this.stack.push(s);let i=this.serializeSetItem(s,o[0]);for(let a=1,l=i;a<t;a++)l=this.serializeSetItem(s,o[a]),i+=(l&&i&&",")+l;this.stack.pop(),i&&(r+="(["+i+"])");}return this.assignIndexedValue(s,r)}serializeMapEntry(e,r,t,s){if(this.isIndexedValueInStack(r)){let o=this.getRefParam(r.i);if(this.markRef(e),this.isIndexedValueInStack(t)){let a=this.getRefParam(t.i);return this.createSetAssignment(e,o,a),""}if(t.t!==4&&t.i!=null&&this.isMarked(t.i)){let a="("+this.serialize(t)+",["+s+","+s+"])";return this.createSetAssignment(e,o,this.getRefParam(t.i)),this.createDeleteAssignment(e,s),a}let i=this.stack;return this.stack=[],this.createSetAssignment(e,o,this.serialize(t)),this.stack=i,""}if(this.isIndexedValueInStack(t)){let o=this.getRefParam(t.i);if(this.markRef(e),r.t!==4&&r.i!=null&&this.isMarked(r.i)){let a="("+this.serialize(r)+",["+s+","+s+"])";return this.createSetAssignment(e,this.getRefParam(r.i),o),this.createDeleteAssignment(e,s),a}let i=this.stack;return this.stack=[],this.createSetAssignment(e,this.serialize(r),o),this.stack=i,""}return "["+this.serialize(r)+","+this.serialize(t)+"]"}serializeMap(e){let r=wr,t=e.e.s,s=e.i,o=e.f,i=this.getRefParam(o.i);if(t){let a=e.e.k,l=e.e.v;this.stack.push(s);let u=this.serializeMapEntry(s,a[0],l[0],i);for(let S=1,Fe=u;S<t;S++)Fe=this.serializeMapEntry(s,a[S],l[S],i),u+=(Fe&&u&&",")+Fe;this.stack.pop(),u&&(r+="(["+u+"])");}return o.t===26&&(this.markRef(o.i),r="("+this.serialize(o)+","+r+")"),this.assignIndexedValue(s,r)}serializeArrayBuffer(e){let r="new Uint8Array(",t=e.s,s=t.length;if(s){r+="["+t[0];for(let o=1;o<s;o++)r+=","+t[o];r+="]";}return this.assignIndexedValue(e.i,r+").buffer")}serializeTypedArray(e){return this.assignIndexedValue(e.i,"new "+e.c+"("+this.serialize(e.f)+","+e.b+","+e.l+")")}serializeDataView(e){return this.assignIndexedValue(e.i,"new DataView("+this.serialize(e.f)+","+e.b+","+e.l+")")}serializeAggregateError(e){let r=e.i;this.stack.push(r);let t=this.serializeDictionary(e,'new AggregateError([],"'+e.m+'")');return this.stack.pop(),t}serializeError(e){return this.serializeDictionary(e,"new "+ie[e.s]+'("'+e.m+'")')}serializePromise(e){let r,t=e.f,s=e.i,o=e.s?Pr:Or;if(this.isIndexedValueInStack(t)){let i=this.getRefParam(t.i);r=o+(e.s?"().then("+this.createFunction([],i)+")":"().catch("+this.createEffectfulFunction([],"throw "+i)+")");}else {this.stack.push(s);let i=this.serialize(t);this.stack.pop(),r=o+"("+i+")";}return this.assignIndexedValue(s,r)}serializeWellKnownSymbol(e){return this.assignIndexedValue(e.i,Le[e.s])}serializeBoxed(e){return this.assignIndexedValue(e.i,"Object("+this.serialize(e.f)+")")}serializePlugin(e){let r=this.plugins;if(r)for(let t=0,s=r.length;t<s;t++){let o=r[t];if(o.tag===e.c)return this.assignIndexedValue(e.i,o.serialize(e.s,this,{id:e.i}))}throw new _$1(e.c)}getConstructor(e){let r=this.serialize(e);return r===this.getRefParam(e.i)?r:"("+r+")"}serializePromiseConstructor(e){return this.assignIndexedValue(e.i,this.getConstructor(e.f)+"()")}serializePromiseResolve(e){return this.getConstructor(e.a[0])+"("+this.getRefParam(e.i)+","+this.serialize(e.a[1])+")"}serializePromiseReject(e){return this.getConstructor(e.a[0])+"("+this.getRefParam(e.i)+","+this.serialize(e.a[1])+")"}serializeSpecialReferenceValue(e){switch(e){case 0:return "[]";case 1:return this.createFunction(["s","f","p"],"((p=new Promise("+this.createEffectfulFunction(["a","b"],"s=a,f=b")+")).s=s,p.f=f,p)");case 2:return this.createEffectfulFunction(["p","d"],'p.s(d),p.status="success",p.value=d;delete p.s;delete p.f');case 3:return this.createEffectfulFunction(["p","d"],'p.f(d),p.status="failure",p.value=d;delete p.s;delete p.f');case 4:return this.createFunction(["b","a","s","l","p","f","e","n"],"(b=[],a=!0,s=!1,l=[],p=0,f="+this.createEffectfulFunction(["v","m","x"],"for(x=0;x<p;x++)l[x]&&l[x][m](v)")+",n="+this.createEffectfulFunction(["o","x","z","c"],'for(x=0,z=b.length;x<z;x++)(c=b[x],(!a&&x===z-1)?o[s?"return":"throw"](c):o.next(c))')+",e="+this.createFunction(["o","t"],"(a&&(l[t=p++]=o),n(o),"+this.createEffectfulFunction([],"a&&(l[t]=void 0)")+")")+",{__SEROVAL_STREAM__:!0,on:"+this.createFunction(["o"],"e(o)")+",next:"+this.createEffectfulFunction(["v"],'a&&(b.push(v),f(v,"next"))')+",throw:"+this.createEffectfulFunction(["v"],'a&&(b.push(v),f(v,"throw"),a=s=!1,l.length=0)')+",return:"+this.createEffectfulFunction(["v"],'a&&(b.push(v),f(v,"return"),a=!1,s=!0,l.length=0)')+"})");default:return ""}}serializeSpecialReference(e){return this.assignIndexedValue(e.i,this.serializeSpecialReferenceValue(e.s))}serializeIteratorFactory(e){let r="",t=!1;return e.f.t!==4&&(this.markRef(e.f.i),r="("+this.serialize(e.f)+",",t=!0),r+=this.assignIndexedValue(e.i,this.createFunction(["s"],this.createFunction(["i","c","d","t"],"(i=0,t={["+this.getRefParam(e.f.i)+"]:"+this.createFunction([],"t")+",next:"+this.createEffectfulFunction([],"if(i>s.d)return{done:!0,value:void 0};if(d=s.v[c=i++],c===s.t)throw d;return{done:c===s.d,value:d}")+"})"))),t&&(r+=")"),r}serializeIteratorFactoryInstance(e){return this.getConstructor(e.a[0])+"("+this.serialize(e.a[1])+")"}serializeAsyncIteratorFactory(e){let r=e.a[0],t=e.a[1],s="";r.t!==4&&(this.markRef(r.i),s+="("+this.serialize(r)),t.t!==4&&(this.markRef(t.i),s+=(s?",":"(")+this.serialize(t)),s&&(s+=",");let o=this.assignIndexedValue(e.i,this.createFunction(["s"],this.createFunction(["b","c","p","d","e","t","f"],"(b=[],c=0,p=[],d=-1,e=!1,f="+this.createEffectfulFunction(["i","l"],"for(i=0,l=p.length;i<l;i++)p[i].s({done:!0,value:void 0})")+",s.on({next:"+this.createEffectfulFunction(["v","t"],"if(t=p.shift())t.s({done:!1,value:v});b.push(v)")+",throw:"+this.createEffectfulFunction(["v","t"],"if(t=p.shift())t.f(v);f(),d=b.length,e=!0,b.push(v)")+",return:"+this.createEffectfulFunction(["v","t"],"if(t=p.shift())t.s({done:!0,value:v});f(),d=b.length,b.push(v)")+"}),t={["+this.getRefParam(t.i)+"]:"+this.createFunction([],"t")+",next:"+this.createEffectfulFunction(["i","t","v"],"if(d===-1){return((i=c++)>=b.length)?(p.push(t="+this.getRefParam(r.i)+"()),t):{done:!1,value:b[i]}}if(c>d)return{done:!0,value:void 0};if(v=b[i=c++],i!==d)return{done:!1,value:v};if(e)throw v;return{done:!0,value:v}")+"})")));return s?s+o+")":o}serializeAsyncIteratorFactoryInstance(e){return this.getConstructor(e.a[0])+"("+this.serialize(e.a[1])+")"}serializeStreamConstructor(e){let r=this.assignIndexedValue(e.i,this.getConstructor(e.f)+"()"),t=e.a.length;if(t){let s=this.serialize(e.a[0]);for(let o=1;o<t;o++)s+=","+this.serialize(e.a[o]);return "("+r+","+s+","+this.getRefParam(e.i)+")"}return r}serializeStreamNext(e){return this.getRefParam(e.i)+".next("+this.serialize(e.f)+")"}serializeStreamThrow(e){return this.getRefParam(e.i)+".throw("+this.serialize(e.f)+")"}serializeStreamReturn(e){return this.getRefParam(e.i)+".return("+this.serialize(e.f)+")"}serialize(e){try{switch(e.t){case 2:return Ye[e.s];case 0:return ""+e.s;case 1:return '"'+e.s+'"';case 3:return e.s+"n";case 4:return this.getRefParam(e.i);case 18:return this.serializeReference(e);case 9:return this.serializeArray(e);case 10:return this.serializeObject(e);case 11:return this.serializeNullConstructor(e);case 5:return this.serializeDate(e);case 6:return this.serializeRegExp(e);case 7:return this.serializeSet(e);case 8:return this.serializeMap(e);case 19:return this.serializeArrayBuffer(e);case 16:case 15:return this.serializeTypedArray(e);case 20:return this.serializeDataView(e);case 14:return this.serializeAggregateError(e);case 13:return this.serializeError(e);case 12:return this.serializePromise(e);case 17:return this.serializeWellKnownSymbol(e);case 21:return this.serializeBoxed(e);case 22:return this.serializePromiseConstructor(e);case 23:return this.serializePromiseResolve(e);case 24:return this.serializePromiseReject(e);case 25:return this.serializePlugin(e);case 26:return this.serializeSpecialReference(e);case 27:return this.serializeIteratorFactory(e);case 28:return this.serializeIteratorFactoryInstance(e);case 29:return this.serializeAsyncIteratorFactory(e);case 30:return this.serializeAsyncIteratorFactoryInstance(e);case 31:return this.serializeStreamConstructor(e);case 32:return this.serializeStreamNext(e);case 33:return this.serializeStreamThrow(e);case 34:return this.serializeStreamReturn(e);default:throw new m$1(e)}}catch(r){throw new we(r)}}};var C=class extends O$1{constructor(r){super(r);this.mode="cross";this.scopeId=r.scopeId;}getRefParam(r){return G$1+"["+r+"]"}assignIndexedValue(r,t){return this.getRefParam(r)+"="+t}serializeTop(r){let t=this.serialize(r),s=r.i;if(s==null)return t;let o=this.resolvePatches(),i=this.getRefParam(s),a=this.scopeId==null?"":G$1,l=o?"("+t+","+o+i+")":t;if(a==="")return r.t===10&&!o?"("+l+")":l;let u=this.scopeId==null?"()":"("+G$1+'["'+d$1(this.scopeId)+'"])';return "("+this.createFunction([a],l)+")"+u}};var g$1=class g extends W{parseItems(e){let r=[];for(let t=0,s=e.length;t<s;t++)t in e&&(r[t]=this.parse(e[t]));return r}parseArray(e,r){return Se(e,r,this.parseItems(r))}parseProperties(e){let r=Object.entries(e),t=[],s=[];for(let i=0,a=r.length;i<a;i++)t.push(d$1(r[i][0])),s.push(this.parse(r[i][1]));let o=Symbol.iterator;return o in e&&(t.push(this.parseWellKnownSymbol(o)),s.push(V$1(this.parseIteratorFactory(),this.parse(U(e))))),o=Symbol.asyncIterator,o in e&&(t.push(this.parseWellKnownSymbol(o)),s.push(D(this.parseAsyncIteratorFactory(),this.parse(M$1())))),o=Symbol.toStringTag,o in e&&(t.push(this.parseWellKnownSymbol(o)),s.push(x$1(e[o]))),o=Symbol.isConcatSpreadable,o in e&&(t.push(this.parseWellKnownSymbol(o)),s.push(e[o]?N:b)),{k:t,v:s,s:t.length}}parsePlainObject(e,r,t){return this.createObjectNode(e,r,t,this.parseProperties(r))}parseBoxed(e,r){return he(e,this.parse(r.valueOf()))}parseTypedArray(e,r){return ye(e,r,this.parse(r.buffer))}parseBigIntTypedArray(e,r){return ve(e,r,this.parse(r.buffer))}parseDataView(e,r){return Ne(e,r,this.parse(r.buffer))}parseError(e,r){let t=k(r,this.features);return be(e,r,t?this.parseProperties(t):void 0)}parseAggregateError(e,r){let t=k(r,this.features);return xe(e,r,t?this.parseProperties(t):void 0)}parseMap(e,r){let t=[],s=[];for(let[o,i]of r.entries())t.push(this.parse(o)),s.push(this.parse(i));return this.createMapNode(e,t,s,r.size)}parseSet(e,r){let t=[];for(let s of r.keys())t.push(this.parse(s));return Ae(e,r.size,t)}parsePlugin(e,r){let t=this.plugins;if(t)for(let s=0,o=t.length;s<o;s++){let i=t[s];if(i.parse.sync&&i.test(r))return F$1(e,i.tag,i.parse.sync(r,this,{id:e}))}}parseStream(e,r){return B$1(e,this.parseSpecialReference(4),[])}parsePromise(e,r){return this.createPromiseConstructorNode(e)}parseObject(e,r){if(Array.isArray(r))return this.parseArray(e,r);if(Ce(r))return this.parseStream(e,r);let t=r.constructor;if(t===E$1)return this.parse(r.replacement);let s=this.parsePlugin(e,r);if(s)return s;switch(t){case Object:return this.parsePlainObject(e,r,!1);case void 0:return this.parsePlainObject(e,r,!0);case Date:return pe(e,r);case RegExp:return me(e,r);case Error:case EvalError:case RangeError:case ReferenceError:case SyntaxError:case TypeError:case URIError:return this.parseError(e,r);case Number:case Boolean:case String:case BigInt:return this.parseBoxed(e,r);case ArrayBuffer:return ge(e,r);case Int8Array:case Int16Array:case Int32Array:case Uint8Array:case Uint16Array:case Uint32Array:case Uint8ClampedArray:case Float32Array:case Float64Array:return this.parseTypedArray(e,r);case DataView:return this.parseDataView(e,r);case Map:return this.parseMap(e,r);case Set:return this.parseSet(e,r);}if(t===Promise||r instanceof Promise)return this.parsePromise(e,r);let o=this.features;if(o&16)switch(t){case BigInt64Array:case BigUint64Array:return this.parseBigIntTypedArray(e,r);}if(o&1&&typeof AggregateError!="undefined"&&(t===AggregateError||r instanceof AggregateError))return this.parseAggregateError(e,r);if(r instanceof Error)return this.parseError(e,r);if(Symbol.iterator in r||Symbol.asyncIterator in r)return this.parsePlainObject(e,r,!!t);throw new p$1(r)}parse(e){try{switch(typeof e){case"boolean":return e?N:b;case"undefined":return ae$1;case"string":return x$1(e);case"number":return ce(e);case"bigint":return fe(e);case"object":{if(e){let r=this.getReference(e);return r.type===0?this.parseObject(r.value,e):r.value}return le}case"symbol":return this.parseWellKnownSymbol(e);case"function":return this.parseFunction(e);default:throw new p$1(e)}}catch(r){throw new j(r)}}};var Q$1=class Q extends g$1{constructor(r){super(r);this.alive=!0;this.pending=0;this.initial=!0;this.buffer=[];this.onParseCallback=r.onParse,this.onErrorCallback=r.onError,this.onDoneCallback=r.onDone;}onParseInternal(r,t){try{this.onParseCallback(r,t);}catch(s){this.onError(s);}}flush(){for(let r=0,t=this.buffer.length;r<t;r++)this.onParseInternal(this.buffer[r],!1);}onParse(r){this.initial?this.buffer.push(r):this.onParseInternal(r,!1);}onError(r){if(this.onErrorCallback)this.onErrorCallback(r);else throw r}onDone(){this.onDoneCallback&&this.onDoneCallback();}pushPendingState(){this.pending++;}popPendingState(){--this.pending<=0&&this.onDone();}parseProperties(r){let t=Object.entries(r),s=[],o=[];for(let a=0,l=t.length;a<l;a++)s.push(d$1(t[a][0])),o.push(this.parse(t[a][1]));let i=Symbol.iterator;return i in r&&(s.push(this.parseWellKnownSymbol(i)),o.push(V$1(this.parseIteratorFactory(),this.parse(U(r))))),i=Symbol.asyncIterator,i in r&&(s.push(this.parseWellKnownSymbol(i)),o.push(D(this.parseAsyncIteratorFactory(),this.parse(ze(r))))),i=Symbol.toStringTag,i in r&&(s.push(this.parseWellKnownSymbol(i)),o.push(x$1(r[i]))),i=Symbol.isConcatSpreadable,i in r&&(s.push(this.parseWellKnownSymbol(i)),o.push(r[i]?N:b)),{k:s,v:o,s:s.length}}parsePromise(r,t){return t.then(s=>{let o=this.parseWithError(s);o&&this.onParse({t:23,i:r,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[this.parseSpecialReference(2),o],f:void 0,b:void 0,o:void 0}),this.popPendingState();},s=>{if(this.alive){let o=this.parseWithError(s);o&&this.onParse({t:24,i:r,s:void 0,l:void 0,c:void 0,m:void 0,p:void 0,e:void 0,a:[this.parseSpecialReference(3),o],f:void 0,b:void 0,o:void 0});}this.popPendingState();}),this.pushPendingState(),this.createPromiseConstructorNode(r)}parsePlugin(r,t){let s=this.plugins;if(s)for(let o=0,i=s.length;o<i;o++){let a=s[o];if(a.parse.stream&&a.test(t))return F$1(r,a.tag,a.parse.stream(t,this,{id:r}))}}parseStream(r,t){let s=B$1(r,this.parseSpecialReference(4),[]);return this.pushPendingState(),t.on({next:o=>{if(this.alive){let i=this.parseWithError(o);i&&this.onParse(Ie(r,i));}},throw:o=>{if(this.alive){let i=this.parseWithError(o);i&&this.onParse(Re(r,i));}this.popPendingState();},return:o=>{if(this.alive){let i=this.parseWithError(o);i&&this.onParse(Ee(r,i));}this.popPendingState();}}),s}parseWithError(r){try{return this.parse(r)}catch(t){this.onError(t);return}}start(r){let t=this.parseWithError(r);t&&(this.onParseInternal(t,!0),this.initial=!1,this.flush(),this.pending<=0&&this.destroy());}destroy(){this.alive&&(this.onDone(),this.alive=!1);}isAlive(){return this.alive}};var L$1=class L extends Q$1{constructor(){super(...arguments);this.mode="cross";}};function dr(n,e){let r=c(e.plugins),t=new L$1({plugins:r,refs:e.refs,disabledFeatures:e.disabledFeatures,onParse(s,o){let i=new C({plugins:r,features:t.features,scopeId:e.scopeId,markedRefs:t.marked}),a;try{a=i.serializeTop(s);}catch(l){e.onError&&e.onError(l);return}e.onSerialize(a,o);},onError:e.onError,onDone:e.onDone});return t.start(n),()=>{t.destroy();}}var ke=class{constructor(e){this.options=e;this.alive=!0;this.flushed=!1;this.done=!1;this.pending=0;this.cleanups=[];this.refs=new Map;this.keys=new Set;this.ids=0;this.plugins=c(e.plugins);}write(e,r){this.alive&&!this.flushed&&(this.pending++,this.keys.add(e),this.cleanups.push(dr(r,{plugins:this.plugins,scopeId:this.options.scopeId,refs:this.refs,disabledFeatures:this.options.disabledFeatures,onError:this.options.onError,onSerialize:(t,s)=>{this.alive&&this.options.onData(s?this.options.globalIdentifier+'["'+d$1(e)+'"]='+t:t);},onDone:()=>{this.alive&&(this.pending--,this.pending<=0&&this.flushed&&!this.done&&this.options.onDone&&(this.options.onDone(),this.done=!0));}})));}getNextID(){for(;this.keys.has(""+this.ids);)this.ids++;return ""+this.ids}push(e){let r=this.getNextID();return this.write(r,e),r}flush(){this.alive&&(this.flushed=!0,this.pending<=0&&!this.done&&this.options.onDone&&(this.options.onDone(),this.done=!0));}close(){if(this.alive){for(let e=0,r=this.cleanups.length;e<r;e++)this.cleanups[e]();!this.done&&this.options.onDone&&(this.options.onDone(),this.done=!0),this.alive=!1;}}};
+- If the reference is present on multiple runtimes (isomorphic), you can use the Reference API to map the references.`);this.value=r;}},g$1=class g extends Error{constructor(e){super('Unsupported node type "'+e.t+'".');}},U=class extends Error{constructor(e){super('Missing plugin for tag "'+e+'".');}},ae$1=class ae extends Error{constructor(r){super('Missing reference for the value "'+_e.call(r)+'" of type "'+typeof r+'"');this.value=r;}};var P=class{constructor(e,r){this.value=e;this.replacement=r;}};var nr={},ar={};var ir={0:{},1:{},2:{},3:{},4:{},5:{},6:{}};function ke(o){return "__SEROVAL_STREAM__"in o}function L$1(){let o=new Set,e=[],r=!0,s=!0;function n(l){for(let c of o.keys())c.next(l);}function a(l){for(let c of o.keys())c.throw(l);}function i(l){for(let c of o.keys())c.return(l);}return {__SEROVAL_STREAM__:!0,on(l){r&&o.add(l);for(let c=0,d=e.length;c<d;c++){let h=e[c];c===d-1&&!r?s?l.return(h):l.throw(h):l.next(h);}return ()=>{r&&o.delete(l);}},next(l){r&&(e.push(l),n(l));},throw(l){r&&(e.push(l),a(l),r=!1,s=!1,o.clear());},return(l){r&&(e.push(l),i(l),r=!1,s=!0,o.clear());}}}function Fe(o){let e=L$1(),r=o[Symbol.asyncIterator]();async function s(){try{let n=await r.next();n.done?e.return(n.value):(e.next(n.value),await s());}catch(n){e.throw(n);}}return s().catch(()=>{}),e}function W(o){let e=[],r=-1,s=-1,n=o[Symbol.iterator]();for(;;)try{let a=n.next();if(e.push(a.value),a.done){s=e.length-1;break}}catch(a){r=e.length,e.push(a);}return {v:e,t:r,d:s}}var K$1=class K{constructor(e){this.marked=new Set;this.plugins=e.plugins,this.features=47^(e.disabledFeatures||0),this.refs=e.refs||new Map;}markRef(e){this.marked.add(e);}isMarked(e){return this.marked.has(e)}getIndexedValue(e){let r=this.refs.get(e);if(r!=null)return this.markRef(r),{type:1,value:sr(r)};let s=this.refs.size;return this.refs.set(e,s),{type:0,value:s}}getReference(e){let r=this.getIndexedValue(e);return r.type===1?r:ne(e)?{type:2,value:je(r.value,e)}:r}getStrictReference(e){m$1(ne(e),new S$1(e));let r=this.getIndexedValue(e);return r.type===1?r.value:je(r.value,e)}parseFunction(e){return this.getStrictReference(e)}parseWellKnownSymbol(e){let r=this.getReference(e);return r.type!==0?r.value:(m$1(e in le,new S$1(e)),or(r.value,e))}parseSpecialReference(e){let r=this.getIndexedValue(ir[e]);return r.type===1?r.value:u$1(26,r.value,e,t,t,t,t,t,t,t,t,t)}parseIteratorFactory(){let e=this.getIndexedValue(nr);return e.type===1?e.value:u$1(27,e.value,t,t,t,t,t,t,t,this.parseWellKnownSymbol(Symbol.iterator),t,t)}parseAsyncIteratorFactory(){let e=this.getIndexedValue(ar);return e.type===1?e.value:u$1(29,e.value,t,t,t,t,t,t,[this.parseSpecialReference(1),this.parseWellKnownSymbol(Symbol.asyncIterator)],t,t,t)}createObjectNode(e,r,s,n){return u$1(s?11:10,e,t,t,t,t,n,t,t,t,t,fe(r))}createMapNode(e,r,s,n){return u$1(8,e,t,t,t,t,t,{k:r,v:s,s:n},t,this.parseSpecialReference(0),t,t)}createPromiseConstructorNode(e){return u$1(22,e,t,t,t,t,t,t,t,this.parseSpecialReference(1),t,t)}createAbortSignalConstructorNode(e){return u$1(35,e,t,t,t,t,t,t,t,this.parseSpecialReference(5),t,t)}};var Er=/^[$A-Z_][0-9A-Z_$]*$/i;function Ue(o){let e=o[0];return (e==="$"||e==="_"||e>="A"&&e<="Z"||e>="a"&&e<="z")&&Er.test(o)}function re(o){switch(o.t){case 0:return o.s+"="+o.v;case 2:return o.s+".set("+o.k+","+o.v+")";case 1:return o.s+".add("+o.v+")";case 3:return o.s+".delete("+o.k+")"}}function Rr(o){let e=[],r=o[0];for(let s=1,n=o.length,a,i=r;s<n;s++)a=o[s],a.t===0&&a.v===i.v?r={t:0,s:a.s,k:t,v:re(r)}:a.t===2&&a.s===i.s?r={t:2,s:re(r),k:a.k,v:a.v}:a.t===1&&a.s===i.s?r={t:1,s:re(r),k:t,v:a.v}:a.t===3&&a.s===i.s?r={t:3,s:re(r),k:a.k,v:t}:(e.push(r),r=a),i=a;return e.push(r),e}function pr(o){if(o.length){let e="",r=Rr(o);for(let s=0,n=r.length;s<n;s++)e+=re(r[s])+",";return e}return t}var Pr="Object.create(null)",Cr="new Set",zr="new Map",Or="Promise.resolve",Tr="Promise.reject",kr={3:"Object.freeze",2:"Object.seal",1:"Object.preventExtensions",0:t},O$1=class O{constructor(e){this.stack=[];this.flags=[];this.assignments=[];this.plugins=e.plugins,this.features=e.features,this.marked=new Set(e.markedRefs);}createFunction(e,r){return this.features&2?(e.length===1?e[0]:"("+e.join(",")+")")+"=>"+(r.startsWith("{")?"("+r+")":r):"function("+e.join(",")+"){return "+r+"}"}createEffectfulFunction(e,r){return this.features&2?(e.length===1?e[0]:"("+e.join(",")+")")+"=>{"+r+"}":"function("+e.join(",")+"){"+r+"}"}markRef(e){this.marked.add(e);}isMarked(e){return this.marked.has(e)}pushObjectFlag(e,r){e!==0&&(this.markRef(r),this.flags.push({type:e,value:this.getRefParam(r)}));}resolveFlags(){let e="";for(let r=0,s=this.flags,n=s.length;r<n;r++){let a=s[r];e+=kr[a.type]+"("+a.value+"),";}return e}resolvePatches(){let e=pr(this.assignments),r=this.resolveFlags();return e?r?e+r:e:r}createAssignment(e,r){this.assignments.push({t:0,s:e,k:t,v:r});}createAddAssignment(e,r){this.assignments.push({t:1,s:this.getRefParam(e),k:t,v:r});}createSetAssignment(e,r,s){this.assignments.push({t:2,s:this.getRefParam(e),k:r,v:s});}createDeleteAssignment(e,r){this.assignments.push({t:3,s:this.getRefParam(e),k:r,v:t});}createArrayAssign(e,r,s){this.createAssignment(this.getRefParam(e)+"["+r+"]",s);}createObjectAssign(e,r,s){this.createAssignment(this.getRefParam(e)+"."+r,s);}isIndexedValueInStack(e){return e.t===4&&this.stack.includes(e.i)}serializeReference(e){return this.assignIndexedValue(e.i,E$1+'.get("'+e.s+'")')}serializeArrayItem(e,r,s){return r?this.isIndexedValueInStack(r)?(this.markRef(e),this.createArrayAssign(e,s,this.getRefParam(r.i)),""):this.serialize(r):""}serializeArray(e){let r=e.i;if(e.l){this.stack.push(r);let s=e.a,n=this.serializeArrayItem(r,s[0],0),a=n==="";for(let i=1,l=e.l,c;i<l;i++)c=this.serializeArrayItem(r,s[i],i),n+=","+c,a=c==="";return this.stack.pop(),this.pushObjectFlag(e.o,e.i),this.assignIndexedValue(r,"["+n+(a?",]":"]"))}return this.assignIndexedValue(r,"[]")}serializeProperty(e,r,s){if(typeof r=="string"){let n=Number(r),a=n>=0&&n.toString()===r||Ue(r);if(this.isIndexedValueInStack(s)){let i=this.getRefParam(s.i);return this.markRef(e.i),a&&n!==n?this.createObjectAssign(e.i,r,i):this.createArrayAssign(e.i,a?r:'"'+r+'"',i),""}return (a?r:'"'+r+'"')+":"+this.serialize(s)}return "["+this.serialize(r)+"]:"+this.serialize(s)}serializeProperties(e,r){let s=r.s;if(s){let n=r.k,a=r.v;this.stack.push(e.i);let i=this.serializeProperty(e,n[0],a[0]);for(let l=1,c=i;l<s;l++)c=this.serializeProperty(e,n[l],a[l]),i+=(c&&i&&",")+c;return this.stack.pop(),"{"+i+"}"}return "{}"}serializeObject(e){return this.pushObjectFlag(e.o,e.i),this.assignIndexedValue(e.i,this.serializeProperties(e,e.p))}serializeWithObjectAssign(e,r,s){let n=this.serializeProperties(e,r);return n!=="{}"?"Object.assign("+s+","+n+")":s}serializeStringKeyAssignment(e,r,s,n){let a=this.serialize(n),i=Number(s),l=i>=0&&i.toString()===s||Ue(s);if(this.isIndexedValueInStack(n))l&&i!==i?this.createObjectAssign(e.i,s,a):this.createArrayAssign(e.i,l?s:'"'+s+'"',a);else {let c=this.assignments;this.assignments=r,l&&i!==i?this.createObjectAssign(e.i,s,a):this.createArrayAssign(e.i,l?s:'"'+s+'"',a),this.assignments=c;}}serializeAssignment(e,r,s,n){if(typeof s=="string")this.serializeStringKeyAssignment(e,r,s,n);else {let a=this.stack;this.stack=[];let i=this.serialize(n);this.stack=a;let l=this.assignments;this.assignments=r,this.createArrayAssign(e.i,this.serialize(s),i),this.assignments=l;}}serializeAssignments(e,r){let s=r.s;if(s){let n=[],a=r.k,i=r.v;this.stack.push(e.i);for(let l=0;l<s;l++)this.serializeAssignment(e,n,a[l],i[l]);return this.stack.pop(),pr(n)}return t}serializeDictionary(e,r){if(e.p)if(this.features&8)r=this.serializeWithObjectAssign(e,e.p,r);else {this.markRef(e.i);let s=this.serializeAssignments(e,e.p);if(s)return "("+this.assignIndexedValue(e.i,r)+","+s+this.getRefParam(e.i)+")"}return this.assignIndexedValue(e.i,r)}serializeNullConstructor(e){return this.pushObjectFlag(e.o,e.i),this.serializeDictionary(e,Pr)}serializeDate(e){return this.assignIndexedValue(e.i,'new Date("'+e.s+'")')}serializeRegExp(e){return this.assignIndexedValue(e.i,"/"+e.c+"/"+e.m)}serializeSetItem(e,r){return this.isIndexedValueInStack(r)?(this.markRef(e),this.createAddAssignment(e,this.getRefParam(r.i)),""):this.serialize(r)}serializeSet(e){let r=Cr,s=e.l,n=e.i;if(s){let a=e.a;this.stack.push(n);let i=this.serializeSetItem(n,a[0]);for(let l=1,c=i;l<s;l++)c=this.serializeSetItem(n,a[l]),i+=(c&&i&&",")+c;this.stack.pop(),i&&(r+="(["+i+"])");}return this.assignIndexedValue(n,r)}serializeMapEntry(e,r,s,n){if(this.isIndexedValueInStack(r)){let a=this.getRefParam(r.i);if(this.markRef(e),this.isIndexedValueInStack(s)){let l=this.getRefParam(s.i);return this.createSetAssignment(e,a,l),""}if(s.t!==4&&s.i!=null&&this.isMarked(s.i)){let l="("+this.serialize(s)+",["+n+","+n+"])";return this.createSetAssignment(e,a,this.getRefParam(s.i)),this.createDeleteAssignment(e,n),l}let i=this.stack;return this.stack=[],this.createSetAssignment(e,a,this.serialize(s)),this.stack=i,""}if(this.isIndexedValueInStack(s)){let a=this.getRefParam(s.i);if(this.markRef(e),r.t!==4&&r.i!=null&&this.isMarked(r.i)){let l="("+this.serialize(r)+",["+n+","+n+"])";return this.createSetAssignment(e,this.getRefParam(r.i),a),this.createDeleteAssignment(e,n),l}let i=this.stack;return this.stack=[],this.createSetAssignment(e,this.serialize(r),a),this.stack=i,""}return "["+this.serialize(r)+","+this.serialize(s)+"]"}serializeMap(e){let r=zr,s=e.e.s,n=e.i,a=e.f,i=this.getRefParam(a.i);if(s){let l=e.e.k,c=e.e.v;this.stack.push(n);let d=this.serializeMapEntry(n,l[0],c[0],i);for(let h=1,H=d;h<s;h++)H=this.serializeMapEntry(n,l[h],c[h],i),d+=(H&&d&&",")+H;this.stack.pop(),d&&(r+="(["+d+"])");}return a.t===26&&(this.markRef(a.i),r="("+this.serialize(a)+","+r+")"),this.assignIndexedValue(n,r)}serializeArrayBuffer(e){let r="new Uint8Array(",s=e.s,n=s.length;if(n){r+="["+s[0];for(let a=1;a<n;a++)r+=","+s[a];r+="]";}return this.assignIndexedValue(e.i,r+").buffer")}serializeTypedArray(e){return this.assignIndexedValue(e.i,"new "+e.c+"("+this.serialize(e.f)+","+e.b+","+e.l+")")}serializeDataView(e){return this.assignIndexedValue(e.i,"new DataView("+this.serialize(e.f)+","+e.b+","+e.l+")")}serializeAggregateError(e){let r=e.i;this.stack.push(r);let s=this.serializeDictionary(e,'new AggregateError([],"'+e.m+'")');return this.stack.pop(),s}serializeError(e){return this.serializeDictionary(e,"new "+ce[e.s]+'("'+e.m+'")')}serializePromise(e){let r,s=e.f,n=e.i,a=e.s?Or:Tr;if(this.isIndexedValueInStack(s)){let i=this.getRefParam(s.i);r=a+(e.s?"().then("+this.createFunction([],i)+")":"().catch("+this.createEffectfulFunction([],"throw "+i)+")");}else {this.stack.push(n);let i=this.serialize(s);this.stack.pop(),r=a+"("+i+")";}return this.assignIndexedValue(n,r)}serializeWellKnownSymbol(e){return this.assignIndexedValue(e.i,$e[e.s])}serializeBoxed(e){return this.assignIndexedValue(e.i,"Object("+this.serialize(e.f)+")")}serializePlugin(e){let r=this.plugins;if(r)for(let s=0,n=r.length;s<n;s++){let a=r[s];if(a.tag===e.c)return this.assignIndexedValue(e.i,a.serialize(e.s,this,{id:e.i}))}throw new U(e.c)}getConstructor(e){let r=this.serialize(e);return r===this.getRefParam(e.i)?r:"("+r+")"}serializePromiseConstructor(e){return this.assignIndexedValue(e.i,this.getConstructor(e.f)+"()")}serializePromiseResolve(e){return this.getConstructor(e.a[0])+"("+this.getRefParam(e.i)+","+this.serialize(e.a[1])+")"}serializePromiseReject(e){return this.getConstructor(e.a[0])+"("+this.getRefParam(e.i)+","+this.serialize(e.a[1])+")"}serializeSpecialReferenceValue(e){switch(e){case 0:return "[]";case 1:return this.createFunction(["s","f","p"],"((p=new Promise("+this.createEffectfulFunction(["a","b"],"s=a,f=b")+")).s=s,p.f=f,p)");case 2:return this.createEffectfulFunction(["p","d"],'p.s(d),p.status="success",p.value=d;delete p.s;delete p.f');case 3:return this.createEffectfulFunction(["p","d"],'p.f(d),p.status="failure",p.value=d;delete p.s;delete p.f');case 4:return this.createFunction(["b","a","s","l","p","f","e","n"],"(b=[],a=!0,s=!1,l=[],p=0,f="+this.createEffectfulFunction(["v","m","x"],"for(x=0;x<p;x++)l[x]&&l[x][m](v)")+",n="+this.createEffectfulFunction(["o","x","z","c"],'for(x=0,z=b.length;x<z;x++)(c=b[x],(!a&&x===z-1)?o[s?"return":"throw"](c):o.next(c))')+",e="+this.createFunction(["o","t"],"(a&&(l[t=p++]=o),n(o),"+this.createEffectfulFunction([],"a&&(l[t]=void 0)")+")")+",{__SEROVAL_STREAM__:!0,on:"+this.createFunction(["o"],"e(o)")+",next:"+this.createEffectfulFunction(["v"],'a&&(b.push(v),f(v,"next"))')+",throw:"+this.createEffectfulFunction(["v"],'a&&(b.push(v),f(v,"throw"),a=s=!1,l.length=0)')+",return:"+this.createEffectfulFunction(["v"],'a&&(b.push(v),f(v,"return"),a=!1,s=!0,l.length=0)')+"})");case 5:return this.createFunction(["a","s"],"((s=(a=new AbortController).signal).a=a,s)");case 6:return this.createEffectfulFunction(["s","r"],"s.a.abort(r);delete s.a");default:return ""}}serializeSpecialReference(e){return this.assignIndexedValue(e.i,this.serializeSpecialReferenceValue(e.s))}serializeIteratorFactory(e){let r="",s=!1;return e.f.t!==4&&(this.markRef(e.f.i),r="("+this.serialize(e.f)+",",s=!0),r+=this.assignIndexedValue(e.i,this.createFunction(["s"],this.createFunction(["i","c","d","t"],"(i=0,t={["+this.getRefParam(e.f.i)+"]:"+this.createFunction([],"t")+",next:"+this.createEffectfulFunction([],"if(i>s.d)return{done:!0,value:void 0};if(d=s.v[c=i++],c===s.t)throw d;return{done:c===s.d,value:d}")+"})"))),s&&(r+=")"),r}serializeIteratorFactoryInstance(e){return this.getConstructor(e.a[0])+"("+this.serialize(e.a[1])+")"}serializeAsyncIteratorFactory(e){let r=e.a[0],s=e.a[1],n="";r.t!==4&&(this.markRef(r.i),n+="("+this.serialize(r)),s.t!==4&&(this.markRef(s.i),n+=(n?",":"(")+this.serialize(s)),n&&(n+=",");let a=this.assignIndexedValue(e.i,this.createFunction(["s"],this.createFunction(["b","c","p","d","e","t","f"],"(b=[],c=0,p=[],d=-1,e=!1,f="+this.createEffectfulFunction(["i","l"],"for(i=0,l=p.length;i<l;i++)p[i].s({done:!0,value:void 0})")+",s.on({next:"+this.createEffectfulFunction(["v","t"],"if(t=p.shift())t.s({done:!1,value:v});b.push(v)")+",throw:"+this.createEffectfulFunction(["v","t"],"if(t=p.shift())t.f(v);f(),d=b.length,e=!0,b.push(v)")+",return:"+this.createEffectfulFunction(["v","t"],"if(t=p.shift())t.s({done:!0,value:v});f(),d=b.length,b.push(v)")+"}),t={["+this.getRefParam(s.i)+"]:"+this.createFunction([],"t")+",next:"+this.createEffectfulFunction(["i","t","v"],"if(d===-1){return((i=c++)>=b.length)?(p.push(t="+this.getRefParam(r.i)+"()),t):{done:!1,value:b[i]}}if(c>d)return{done:!0,value:void 0};if(v=b[i=c++],i!==d)return{done:!1,value:v};if(e)throw v;return{done:!0,value:v}")+"})")));return n?n+a+")":a}serializeAsyncIteratorFactoryInstance(e){return this.getConstructor(e.a[0])+"("+this.serialize(e.a[1])+")"}serializeStreamConstructor(e){let r=this.assignIndexedValue(e.i,this.getConstructor(e.f)+"()"),s=e.a.length;if(s){let n=this.serialize(e.a[0]);for(let a=1;a<s;a++)n+=","+this.serialize(e.a[a]);return "("+r+","+n+","+this.getRefParam(e.i)+")"}return r}serializeStreamNext(e){return this.getRefParam(e.i)+".next("+this.serialize(e.f)+")"}serializeStreamThrow(e){return this.getRefParam(e.i)+".throw("+this.serialize(e.f)+")"}serializeStreamReturn(e){return this.getRefParam(e.i)+".return("+this.serialize(e.f)+")"}serializeAbortSignalSync(e){return this.assignIndexedValue(e.i,"AbortSignal.abort("+this.serialize(e.f)+")")}serializeAbortSignalConstructor(e){return this.assignIndexedValue(e.i,this.getConstructor(e.f)+"()")}serializeAbortSignalAbort(e){return this.getConstructor(e.a[0])+"("+this.getRefParam(e.i)+","+this.serialize(e.a[1])+")"}serialize(e){try{switch(e.t){case 2:return qe[e.s];case 0:return ""+e.s;case 1:return '"'+e.s+'"';case 3:return e.s+"n";case 4:return this.getRefParam(e.i);case 18:return this.serializeReference(e);case 9:return this.serializeArray(e);case 10:return this.serializeObject(e);case 11:return this.serializeNullConstructor(e);case 5:return this.serializeDate(e);case 6:return this.serializeRegExp(e);case 7:return this.serializeSet(e);case 8:return this.serializeMap(e);case 19:return this.serializeArrayBuffer(e);case 16:case 15:return this.serializeTypedArray(e);case 20:return this.serializeDataView(e);case 14:return this.serializeAggregateError(e);case 13:return this.serializeError(e);case 12:return this.serializePromise(e);case 17:return this.serializeWellKnownSymbol(e);case 21:return this.serializeBoxed(e);case 22:return this.serializePromiseConstructor(e);case 23:return this.serializePromiseResolve(e);case 24:return this.serializePromiseReject(e);case 25:return this.serializePlugin(e);case 26:return this.serializeSpecialReference(e);case 27:return this.serializeIteratorFactory(e);case 28:return this.serializeIteratorFactoryInstance(e);case 29:return this.serializeAsyncIteratorFactory(e);case 30:return this.serializeAsyncIteratorFactoryInstance(e);case 31:return this.serializeStreamConstructor(e);case 32:return this.serializeStreamNext(e);case 33:return this.serializeStreamThrow(e);case 34:return this.serializeStreamReturn(e);case 36:return this.serializeAbortSignalAbort(e);case 35:return this.serializeAbortSignalConstructor(e);case 37:return this.serializeAbortSignalSync(e);default:throw new g$1(e)}}catch(r){throw new ze(r)}}};var T=class extends O$1{constructor(r){super(r);this.mode="cross";this.scopeId=r.scopeId;}getRefParam(r){return Z$1+"["+r+"]"}assignIndexedValue(r,s){return this.getRefParam(r)+"="+s}serializeTop(r){let s=this.serialize(r),n=r.i;if(n==null)return s;let a=this.resolvePatches(),i=this.getRefParam(n),l=this.scopeId==null?"":Z$1,c=a?"("+s+","+a+i+")":s;if(l==="")return r.t===10&&!a?"("+c+")":c;let d=this.scopeId==null?"()":"("+Z$1+'["'+p$1(this.scopeId)+'"])';return "("+this.createFunction([l],c)+")"+d}};var N=class extends K$1{parseItems(e){let r=[];for(let s=0,n=e.length;s<n;s++)s in e&&(r[s]=this.parse(e[s]));return r}parseArray(e,r){return ve(e,r,this.parseItems(r))}parseProperties(e){let r=Object.entries(e),s=[],n=[];for(let i=0,l=r.length;i<l;i++)s.push(p$1(r[i][0])),n.push(this.parse(r[i][1]));let a=Symbol.iterator;return a in e&&(s.push(this.parseWellKnownSymbol(a)),n.push(B$1(this.parseIteratorFactory(),this.parse(W(e))))),a=Symbol.asyncIterator,a in e&&(s.push(this.parseWellKnownSymbol(a)),n.push(j(this.parseAsyncIteratorFactory(),this.parse(L$1())))),a=Symbol.toStringTag,a in e&&(s.push(this.parseWellKnownSymbol(a)),n.push(w(e[a]))),a=Symbol.isConcatSpreadable,a in e&&(s.push(this.parseWellKnownSymbol(a)),n.push(e[a]?x$1:I$1)),{k:s,v:n,s:s.length}}parsePlainObject(e,r,s){return this.createObjectNode(e,r,s,this.parseProperties(r))}parseBoxed(e,r){return Ne(e,this.parse(r.valueOf()))}parseTypedArray(e,r){return be(e,r,this.parse(r.buffer))}parseBigIntTypedArray(e,r){return Ae(e,r,this.parse(r.buffer))}parseDataView(e,r){return xe(e,r,this.parse(r.buffer))}parseError(e,r){let s=V$1(r,this.features);return Ie(e,r,s?this.parseProperties(s):t)}parseAggregateError(e,r){let s=V$1(r,this.features);return we(e,r,s?this.parseProperties(s):t)}parseMap(e,r){let s=[],n=[];for(let[a,i]of r.entries())s.push(this.parse(a)),n.push(this.parse(i));return this.createMapNode(e,s,n,r.size)}parseSet(e,r){let s=[];for(let n of r.keys())s.push(this.parse(n));return Ee(e,r.size,s)}parsePlugin(e,r){let s=this.plugins;if(s)for(let n=0,a=s.length;n<a;n++){let i=s[n];if(i.parse.sync&&i.test(r))return D(e,i.tag,i.parse.sync(r,this,{id:e}))}}parseStream(e,r){return _$1(e,this.parseSpecialReference(4),[])}parsePromise(e,r){return this.createPromiseConstructorNode(e)}parseAbortSignalSync(e,r){return u$1(37,e,t,t,t,t,t,t,t,this.parse(r.reason),t,t)}parseAbortSignal(e,r){return r.aborted?this.parseAbortSignalSync(e,r):this.createAbortSignalConstructorNode(e)}parseObject(e,r){if(Array.isArray(r))return this.parseArray(e,r);if(ke(r))return this.parseStream(e,r);let s=r.constructor;if(s===P)return this.parse(r.replacement);let n=this.parsePlugin(e,r);if(n)return n;switch(s){case Object:return this.parsePlainObject(e,r,!1);case void 0:return this.parsePlainObject(e,r,!0);case Date:return ge(e,r);case RegExp:return he(e,r);case Error:case EvalError:case RangeError:case ReferenceError:case SyntaxError:case TypeError:case URIError:return this.parseError(e,r);case Number:case Boolean:case String:case BigInt:return this.parseBoxed(e,r);case ArrayBuffer:return ye(e,r);case Int8Array:case Int16Array:case Int32Array:case Uint8Array:case Uint16Array:case Uint32Array:case Uint8ClampedArray:case Float32Array:case Float64Array:return this.parseTypedArray(e,r);case DataView:return this.parseDataView(e,r);case Map:return this.parseMap(e,r);case Set:return this.parseSet(e,r);}if(s===Promise||r instanceof Promise)return this.parsePromise(e,r);let a=this.features;if(a&32&&typeof AbortSignal!="undefined"&&s===AbortSignal)return this.parseAbortSignal(e,r);if(a&16)switch(s){case BigInt64Array:case BigUint64Array:return this.parseBigIntTypedArray(e,r);}if(a&1&&typeof AggregateError!="undefined"&&(s===AggregateError||r instanceof AggregateError))return this.parseAggregateError(e,r);if(r instanceof Error)return this.parseError(e,r);if(Symbol.iterator in r||Symbol.asyncIterator in r)return this.parsePlainObject(e,r,!!s);throw new S$1(r)}parse(e){try{switch(typeof e){case"boolean":return e?x$1:I$1;case"undefined":return ue;case"string":return w(e);case"number":return me(e);case"bigint":return Se(e);case"object":{if(e){let r=this.getReference(e);return r.type===0?this.parseObject(r.value,e):r.value}return de}case"symbol":return this.parseWellKnownSymbol(e);case"function":return this.parseFunction(e);default:throw new S$1(e)}}catch(r){throw new M$1(r)}}};var te$1=class te extends N{constructor(r){super(r);this.alive=!0;this.pending=0;this.initial=!0;this.buffer=[];this.onParseCallback=r.onParse,this.onErrorCallback=r.onError,this.onDoneCallback=r.onDone;}onParseInternal(r,s){try{this.onParseCallback(r,s);}catch(n){this.onError(n);}}flush(){for(let r=0,s=this.buffer.length;r<s;r++)this.onParseInternal(this.buffer[r],!1);}onParse(r){this.initial?this.buffer.push(r):this.onParseInternal(r,!1);}onError(r){if(this.onErrorCallback)this.onErrorCallback(r);else throw r}onDone(){this.onDoneCallback&&this.onDoneCallback();}pushPendingState(){this.pending++;}popPendingState(){--this.pending<=0&&this.onDone();}parseProperties(r){let s=Object.entries(r),n=[],a=[];for(let l=0,c=s.length;l<c;l++)n.push(p$1(s[l][0])),a.push(this.parse(s[l][1]));let i=Symbol.iterator;return i in r&&(n.push(this.parseWellKnownSymbol(i)),a.push(B$1(this.parseIteratorFactory(),this.parse(W(r))))),i=Symbol.asyncIterator,i in r&&(n.push(this.parseWellKnownSymbol(i)),a.push(j(this.parseAsyncIteratorFactory(),this.parse(Fe(r))))),i=Symbol.toStringTag,i in r&&(n.push(this.parseWellKnownSymbol(i)),a.push(w(r[i]))),i=Symbol.isConcatSpreadable,i in r&&(n.push(this.parseWellKnownSymbol(i)),a.push(r[i]?x$1:I$1)),{k:n,v:a,s:n.length}}parsePromise(r,s){return s.then(n=>{let a=this.parseWithError(n);a&&this.onParse(u$1(23,r,t,t,t,t,t,t,[this.parseSpecialReference(2),a],t,t,t)),this.popPendingState();},n=>{if(this.alive){let a=this.parseWithError(n);a&&this.onParse(u$1(24,r,t,t,t,t,t,t,[this.parseSpecialReference(3),a],t,t,t));}this.popPendingState();}),this.pushPendingState(),this.createPromiseConstructorNode(r)}parsePlugin(r,s){let n=this.plugins;if(n)for(let a=0,i=n.length;a<i;a++){let l=n[a];if(l.parse.stream&&l.test(s))return D(r,l.tag,l.parse.stream(s,this,{id:r}))}return t}parseStream(r,s){let n=_$1(r,this.parseSpecialReference(4),[]);return this.pushPendingState(),s.on({next:a=>{if(this.alive){let i=this.parseWithError(a);i&&this.onParse(Re(r,i));}},throw:a=>{if(this.alive){let i=this.parseWithError(a);i&&this.onParse(Pe(r,i));}this.popPendingState();},return:a=>{if(this.alive){let i=this.parseWithError(a);i&&this.onParse(Ce(r,i));}this.popPendingState();}}),n}parseAbortSignal(r,s){return s.aborted?this.parseAbortSignalSync(r,s):(this.pushPendingState(),s.addEventListener("abort",()=>{if(this.alive){let n=this.parseWithError(s.reason);n&&this.onParse(u$1(36,r,t,t,t,t,t,t,[this.parseSpecialReference(6),n],t,t,t));}this.popPendingState();},{once:!0}),this.createAbortSignalConstructorNode(r))}parseWithError(r){try{return this.parse(r)}catch(s){return this.onError(s),t}}start(r){let s=this.parseWithError(r);s&&(this.onParseInternal(s,!0),this.initial=!1,this.flush(),this.pending<=0&&this.destroy());}destroy(){this.alive&&(this.onDone(),this.alive=!1);}isAlive(){return this.alive}};var Y=class extends te$1{constructor(){super(...arguments);this.mode="cross";}};function fr(o,e){let r=f$1(e.plugins),s=new Y({plugins:r,refs:e.refs,disabledFeatures:e.disabledFeatures,onParse(n,a){let i=new T({plugins:r,features:s.features,scopeId:e.scopeId,markedRefs:s.marked}),l;try{l=i.serializeTop(n);}catch(c){e.onError&&e.onError(c);return}e.onSerialize(l,a);},onError:e.onError,onDone:e.onDone});return s.start(o),()=>{s.destroy();}}var De=class{constructor(e){this.options=e;this.alive=!0;this.flushed=!1;this.done=!1;this.pending=0;this.cleanups=[];this.refs=new Map;this.keys=new Set;this.ids=0;this.plugins=f$1(e.plugins);}write(e,r){this.alive&&!this.flushed&&(this.pending++,this.keys.add(e),this.cleanups.push(fr(r,{plugins:this.plugins,scopeId:this.options.scopeId,refs:this.refs,disabledFeatures:this.options.disabledFeatures,onError:this.options.onError,onSerialize:(s,n)=>{this.alive&&this.options.onData(n?this.options.globalIdentifier+'["'+p$1(e)+'"]='+s:s);},onDone:()=>{this.alive&&(this.pending--,this.pending<=0&&this.flushed&&!this.done&&this.options.onDone&&(this.options.onDone(),this.done=!0));}})));}getNextID(){for(;this.keys.has(""+this.ids);)this.ids++;return ""+this.ids}push(e){let r=this.getNextID();return this.write(r,e),r}flush(){this.alive&&(this.flushed=!0,this.pending<=0&&!this.done&&this.options.onDone&&(this.options.onDone(),this.done=!0));}close(){if(this.alive){for(let e=0,r=this.cleanups.length;e<r;e++)this.cleanups[e]();!this.done&&this.options.onDone&&(this.options.onDone(),this.done=!0),this.alive=!1;}}};
 
-function p(e){return {detail:e.detail,bubbles:e.bubbles,cancelable:e.cancelable,composed:e.composed}}var E=Mr({tag:"seroval-plugins/web/CustomEvent",test(e){return typeof CustomEvent=="undefined"?!1:e instanceof CustomEvent},parse:{sync(e,r){return {type:r.parse(e.type),options:r.parse(p(e))}},async async(e,r){return {type:await r.parse(e.type),options:await r.parse(p(e))}},stream(e,r){return {type:r.parse(e.type),options:r.parse(p(e))}}},serialize(e,r){return "new CustomEvent("+r.serialize(e.type)+","+r.serialize(e.options)+")"},deserialize(e,r){return new CustomEvent(r.deserialize(e.type),r.deserialize(e.options))}}),F=E;var I=Mr({tag:"seroval-plugins/web/DOMException",test(e){return typeof DOMException=="undefined"?!1:e instanceof DOMException},parse:{sync(e,r){return {name:r.parse(e.name),message:r.parse(e.message)}},async async(e,r){return {name:await r.parse(e.name),message:await r.parse(e.message)}},stream(e,r){return {name:r.parse(e.name),message:r.parse(e.message)}}},serialize(e,r){return "new DOMException("+r.serialize(e.message)+","+r.serialize(e.name)+")"},deserialize(e,r){return new DOMException(r.deserialize(e.message),r.deserialize(e.name))}}),B=I;function u(e){return {bubbles:e.bubbles,cancelable:e.cancelable,composed:e.composed}}var L=Mr({tag:"seroval-plugins/web/Event",test(e){return typeof Event=="undefined"?!1:e instanceof Event},parse:{sync(e,r){return {type:r.parse(e.type),options:r.parse(u(e))}},async async(e,r){return {type:await r.parse(e.type),options:await r.parse(u(e))}},stream(e,r){return {type:r.parse(e.type),options:r.parse(u(e))}}},serialize(e,r){return "new Event("+r.serialize(e.type)+","+r.serialize(e.options)+")"},deserialize(e,r){return new Event(r.deserialize(e.type),r.deserialize(e.options))}}),O=L;var q=Mr({tag:"seroval-plugins/web/File",test(e){return typeof File=="undefined"?!1:e instanceof File},parse:{async async(e,r){return {name:await r.parse(e.name),options:await r.parse({type:e.type,lastModified:e.lastModified}),buffer:await r.parse(await e.arrayBuffer())}}},serialize(e,r){return "new File(["+r.serialize(e.buffer)+"],"+r.serialize(e.name)+","+r.serialize(e.options)+")"},deserialize(e,r){return new File([r.deserialize(e.buffer)],r.deserialize(e.name),r.deserialize(e.options))}}),d=q;function f(e){let r=[];return e.forEach((s,a)=>{r.push([a,s]);}),r}var n={},H=Mr({tag:"seroval-plugins/web/FormDataFactory",test(e){return e===n},parse:{sync(){},async async(){return await Promise.resolve(void 0)},stream(){}},serialize(e,r){return r.createEffectfulFunction(["e","f","i","s","t"],"f=new FormData;for(i=0,s=e.length;i<s;i++)f.append((t=e[i])[0],t[1]);return f")},deserialize(){return n}}),M=Mr({tag:"seroval-plugins/web/FormData",extends:[d,H],test(e){return typeof FormData=="undefined"?!1:e instanceof FormData},parse:{sync(e,r){return {factory:r.parse(n),entries:r.parse(f(e))}},async async(e,r){return {factory:await r.parse(n),entries:await r.parse(f(e))}},stream(e,r){return {factory:r.parse(n),entries:r.parse(f(e))}}},serialize(e,r){return "("+r.serialize(e.factory)+")("+r.serialize(e.entries)+")"},deserialize(e,r){let s=new FormData,a=r.deserialize(e.entries);for(let t=0,b=a.length;t<b;t++){let c=a[t];s.append(c[0],c[1]);}return s}}),A=M;function m(e){let r=[];return e.forEach((s,a)=>{r.push([a,s]);}),r}var _=Mr({tag:"seroval-plugins/web/Headers",test(e){return typeof Headers=="undefined"?!1:e instanceof Headers},parse:{sync(e,r){return r.parse(m(e))},async async(e,r){return await r.parse(m(e))},stream(e,r){return r.parse(m(e))}},serialize(e,r){return "new Headers("+r.serialize(e)+")"},deserialize(e,r){return new Headers(r.deserialize(e))}}),i=_;var o={},V=Mr({tag:"seroval-plugins/web/ReadableStreamFactory",test(e){return e===o},parse:{sync(){},async async(){return await Promise.resolve(void 0)},stream(){}},serialize(e,r){return r.createFunction(["d"],"new ReadableStream({start:"+r.createEffectfulFunction(["c"],"d.on({next:"+r.createEffectfulFunction(["v"],"c.enqueue(v)")+",throw:"+r.createEffectfulFunction(["v"],"c.error(v)")+",return:"+r.createEffectfulFunction([],"c.close()")+"})")+"})")},deserialize(){return o}});function g(e){let r=M$1(),s=e.getReader();async function a(){try{let t=await s.read();t.done?r.return(t.value):(r.next(t.value),await a());}catch(t){r.throw(t);}}return a().catch(()=>{}),r}var G=Mr({tag:"seroval/plugins/web/ReadableStream",extends:[V],test(e){return typeof ReadableStream=="undefined"?!1:e instanceof ReadableStream},parse:{sync(e,r){return {factory:r.parse(o),stream:r.parse(M$1())}},async async(e,r){return {factory:await r.parse(o),stream:await r.parse(g(e))}},stream(e,r){return {factory:r.parse(o),stream:r.parse(g(e))}}},serialize(e,r){return "("+r.serialize(e.factory)+")("+r.serialize(e.stream)+")"},deserialize(e,r){let s=r.deserialize(e.stream);return new ReadableStream({start(a){s.on({next(t){a.enqueue(t);},throw(t){a.error(t);},return(){a.close();}});}})}}),l=G;function z(e,r){return {body:r,cache:e.cache,credentials:e.credentials,headers:e.headers,integrity:e.integrity,keepalive:e.keepalive,method:e.method,mode:e.mode,redirect:e.redirect,referrer:e.referrer,referrerPolicy:e.referrerPolicy}}var K=Mr({tag:"seroval-plugins/web/Request",extends:[l,i],test(e){return typeof Request=="undefined"?!1:e instanceof Request},parse:{async async(e,r){return {url:await r.parse(e.url),options:await r.parse(z(e,e.body?await e.clone().arrayBuffer():null))}},stream(e,r){return {url:r.parse(e.url),options:r.parse(z(e,e.clone().body))}}},serialize(e,r){return "new Request("+r.serialize(e.url)+","+r.serialize(e.options)+")"},deserialize(e,r){return new Request(r.deserialize(e.url),r.deserialize(e.options))}}),Q=K;function S(e){return {headers:e.headers,status:e.status,statusText:e.statusText}}var X=Mr({tag:"seroval-plugins/web/Response",extends:[l,i],test(e){return typeof Response=="undefined"?!1:e instanceof Response},parse:{async async(e,r){return {body:await r.parse(e.body?await e.clone().arrayBuffer():null),options:await r.parse(S(e))}},stream(e,r){return {body:r.parse(e.clone().body),options:r.parse(S(e))}}},serialize(e,r){return "new Response("+r.serialize(e.body)+","+r.serialize(e.options)+")"},deserialize(e,r){return new Response(r.deserialize(e.body),r.deserialize(e.options))}}),Z=X;var x=Mr({tag:"seroval-plugins/web/URLSearchParams",test(e){return typeof URLSearchParams=="undefined"?!1:e instanceof URLSearchParams},parse:{sync(e,r){return r.parse(e.toString())},async async(e,r){return await r.parse(e.toString())},stream(e,r){return r.parse(e.toString())}},serialize(e,r){return "new URLSearchParams("+r.serialize(e)+")"},deserialize(e,r){return new URLSearchParams(r.deserialize(e))}}),ee=x;var ae=Mr({tag:"seroval-plugins/web/URL",test(e){return typeof URL=="undefined"?!1:e instanceof URL},parse:{sync(e,r){return r.parse(e.href)},async async(e,r){return await r.parse(e.href)},stream(e,r){return r.parse(e.href)}},serialize(e,r){return "new URL("+r.serialize(e)+")"},deserialize(e,r){return new URL(r.deserialize(e))}}),te=ae;
+function p(e){return {detail:e.detail,bubbles:e.bubbles,cancelable:e.cancelable,composed:e.composed}}var E=Wr({tag:"seroval-plugins/web/CustomEvent",test(e){return typeof CustomEvent=="undefined"?!1:e instanceof CustomEvent},parse:{sync(e,r){return {type:r.parse(e.type),options:r.parse(p(e))}},async async(e,r){return {type:await r.parse(e.type),options:await r.parse(p(e))}},stream(e,r){return {type:r.parse(e.type),options:r.parse(p(e))}}},serialize(e,r){return "new CustomEvent("+r.serialize(e.type)+","+r.serialize(e.options)+")"},deserialize(e,r){return new CustomEvent(r.deserialize(e.type),r.deserialize(e.options))}}),F=E;var I=Wr({tag:"seroval-plugins/web/DOMException",test(e){return typeof DOMException=="undefined"?!1:e instanceof DOMException},parse:{sync(e,r){return {name:r.parse(e.name),message:r.parse(e.message)}},async async(e,r){return {name:await r.parse(e.name),message:await r.parse(e.message)}},stream(e,r){return {name:r.parse(e.name),message:r.parse(e.message)}}},serialize(e,r){return "new DOMException("+r.serialize(e.message)+","+r.serialize(e.name)+")"},deserialize(e,r){return new DOMException(r.deserialize(e.message),r.deserialize(e.name))}}),B=I;function u(e){return {bubbles:e.bubbles,cancelable:e.cancelable,composed:e.composed}}var L=Wr({tag:"seroval-plugins/web/Event",test(e){return typeof Event=="undefined"?!1:e instanceof Event},parse:{sync(e,r){return {type:r.parse(e.type),options:r.parse(u(e))}},async async(e,r){return {type:await r.parse(e.type),options:await r.parse(u(e))}},stream(e,r){return {type:r.parse(e.type),options:r.parse(u(e))}}},serialize(e,r){return "new Event("+r.serialize(e.type)+","+r.serialize(e.options)+")"},deserialize(e,r){return new Event(r.deserialize(e.type),r.deserialize(e.options))}}),O=L;var q=Wr({tag:"seroval-plugins/web/File",test(e){return typeof File=="undefined"?!1:e instanceof File},parse:{async async(e,r){return {name:await r.parse(e.name),options:await r.parse({type:e.type,lastModified:e.lastModified}),buffer:await r.parse(await e.arrayBuffer())}}},serialize(e,r){return "new File(["+r.serialize(e.buffer)+"],"+r.serialize(e.name)+","+r.serialize(e.options)+")"},deserialize(e,r){return new File([r.deserialize(e.buffer)],r.deserialize(e.name),r.deserialize(e.options))}}),d=q;function f(e){let r=[];return e.forEach((s,a)=>{r.push([a,s]);}),r}var n={},H=Wr({tag:"seroval-plugins/web/FormDataFactory",test(e){return e===n},parse:{sync(){},async async(){return await Promise.resolve(void 0)},stream(){}},serialize(e,r){return r.createEffectfulFunction(["e","f","i","s","t"],"f=new FormData;for(i=0,s=e.length;i<s;i++)f.append((t=e[i])[0],t[1]);return f")},deserialize(){return n}}),M=Wr({tag:"seroval-plugins/web/FormData",extends:[d,H],test(e){return typeof FormData=="undefined"?!1:e instanceof FormData},parse:{sync(e,r){return {factory:r.parse(n),entries:r.parse(f(e))}},async async(e,r){return {factory:await r.parse(n),entries:await r.parse(f(e))}},stream(e,r){return {factory:r.parse(n),entries:r.parse(f(e))}}},serialize(e,r){return "("+r.serialize(e.factory)+")("+r.serialize(e.entries)+")"},deserialize(e,r){let s=new FormData,a=r.deserialize(e.entries);for(let t=0,b=a.length;t<b;t++){let c=a[t];s.append(c[0],c[1]);}return s}}),A=M;function m(e){let r=[];return e.forEach((s,a)=>{r.push([a,s]);}),r}var _=Wr({tag:"seroval-plugins/web/Headers",test(e){return typeof Headers=="undefined"?!1:e instanceof Headers},parse:{sync(e,r){return r.parse(m(e))},async async(e,r){return await r.parse(m(e))},stream(e,r){return r.parse(m(e))}},serialize(e,r){return "new Headers("+r.serialize(e)+")"},deserialize(e,r){return new Headers(r.deserialize(e))}}),i=_;var o={},V=Wr({tag:"seroval-plugins/web/ReadableStreamFactory",test(e){return e===o},parse:{sync(){},async async(){return await Promise.resolve(void 0)},stream(){}},serialize(e,r){return r.createFunction(["d"],"new ReadableStream({start:"+r.createEffectfulFunction(["c"],"d.on({next:"+r.createEffectfulFunction(["v"],"c.enqueue(v)")+",throw:"+r.createEffectfulFunction(["v"],"c.error(v)")+",return:"+r.createEffectfulFunction([],"c.close()")+"})")+"})")},deserialize(){return o}});function g(e){let r=L$1(),s=e.getReader();async function a(){try{let t=await s.read();t.done?r.return(t.value):(r.next(t.value),await a());}catch(t){r.throw(t);}}return a().catch(()=>{}),r}var G=Wr({tag:"seroval/plugins/web/ReadableStream",extends:[V],test(e){return typeof ReadableStream=="undefined"?!1:e instanceof ReadableStream},parse:{sync(e,r){return {factory:r.parse(o),stream:r.parse(L$1())}},async async(e,r){return {factory:await r.parse(o),stream:await r.parse(g(e))}},stream(e,r){return {factory:r.parse(o),stream:r.parse(g(e))}}},serialize(e,r){return "("+r.serialize(e.factory)+")("+r.serialize(e.stream)+")"},deserialize(e,r){let s=r.deserialize(e.stream);return new ReadableStream({start(a){s.on({next(t){a.enqueue(t);},throw(t){a.error(t);},return(){a.close();}});}})}}),l=G;function z(e,r){return {body:r,cache:e.cache,credentials:e.credentials,headers:e.headers,integrity:e.integrity,keepalive:e.keepalive,method:e.method,mode:e.mode,redirect:e.redirect,referrer:e.referrer,referrerPolicy:e.referrerPolicy}}var K=Wr({tag:"seroval-plugins/web/Request",extends:[l,i],test(e){return typeof Request=="undefined"?!1:e instanceof Request},parse:{async async(e,r){return {url:await r.parse(e.url),options:await r.parse(z(e,e.body?await e.clone().arrayBuffer():null))}},stream(e,r){return {url:r.parse(e.url),options:r.parse(z(e,e.clone().body))}}},serialize(e,r){return "new Request("+r.serialize(e.url)+","+r.serialize(e.options)+")"},deserialize(e,r){return new Request(r.deserialize(e.url),r.deserialize(e.options))}}),Q=K;function S(e){return {headers:e.headers,status:e.status,statusText:e.statusText}}var X=Wr({tag:"seroval-plugins/web/Response",extends:[l,i],test(e){return typeof Response=="undefined"?!1:e instanceof Response},parse:{async async(e,r){return {body:await r.parse(e.body?await e.clone().arrayBuffer():null),options:await r.parse(S(e))}},stream(e,r){return {body:r.parse(e.clone().body),options:r.parse(S(e))}}},serialize(e,r){return "new Response("+r.serialize(e.body)+","+r.serialize(e.options)+")"},deserialize(e,r){return new Response(r.deserialize(e.body),r.deserialize(e.options))}}),Z=X;var x=Wr({tag:"seroval-plugins/web/URLSearchParams",test(e){return typeof URLSearchParams=="undefined"?!1:e instanceof URLSearchParams},parse:{sync(e,r){return r.parse(e.toString())},async async(e,r){return await r.parse(e.toString())},stream(e,r){return r.parse(e.toString())}},serialize(e,r){return "new URLSearchParams("+r.serialize(e)+")"},deserialize(e,r){return new URLSearchParams(r.deserialize(e))}}),ee=x;var ae=Wr({tag:"seroval-plugins/web/URL",test(e){return typeof URL=="undefined"?!1:e instanceof URL},parse:{sync(e,r){return r.parse(e.href)},async async(e,r){return await r.parse(e.href)},stream(e,r){return r.parse(e.href)}},serialize(e,r){return "new URL("+r.serialize(e)+")"},deserialize(e,r){return new URL(r.deserialize(e))}}),te=ae;
 
-const booleans = ["allowfullscreen", "async", "autofocus", "autoplay", "checked", "controls", "default", "disabled", "formnovalidate", "hidden", "indeterminate", "inert", "ismap", "loop", "multiple", "muted", "nomodule", "novalidate", "open", "playsinline", "readonly", "required", "reversed", "seamless", "selected"];
-const BooleanAttributes = /*#__PURE__*/new Set(booleans);
-const ChildProperties = /*#__PURE__*/new Set(["innerHTML", "textContent", "innerText", "children"]);
-const Aliases = /*#__PURE__*/Object.assign(Object.create(null), {
+const booleans = [
+  "allowfullscreen",
+  "async",
+  "autofocus",
+  "autoplay",
+  "checked",
+  "controls",
+  "default",
+  "disabled",
+  "formnovalidate",
+  "hidden",
+  "indeterminate",
+  "inert",
+  "ismap",
+  "loop",
+  "multiple",
+  "muted",
+  "nomodule",
+  "novalidate",
+  "open",
+  "playsinline",
+  "readonly",
+  "required",
+  "reversed",
+  "seamless",
+  "selected"
+];
+const BooleanAttributes = /*#__PURE__*/ new Set(booleans);
+const ChildProperties = /*#__PURE__*/ new Set([
+  "innerHTML",
+  "textContent",
+  "innerText",
+  "children"
+]);
+const Aliases = /*#__PURE__*/ Object.assign(Object.create(null), {
   className: "class",
   htmlFor: "for"
 });
 
-const ES2017FLAG = T.AggregateError
-| T.BigIntTypedArray;
-const GLOBAL_IDENTIFIER = '_$HY.r';
-function createSerializer({
-  onData,
-  onDone,
-  scopeId,
-  onError
-}) {
-  return new ke({
+const ES2017FLAG = F$1.AggregateError | F$1.BigIntTypedArray;
+const GLOBAL_IDENTIFIER = "_$HY.r";
+function createSerializer({ onData, onDone, scopeId, onError }) {
+  return new De({
     scopeId,
     plugins: [
-    F, B, O,
-    A, i, l, Q, Z, ee, te],
+      F,
+      B,
+      O,
+      A,
+      i,
+      l,
+      Q,
+      Z,
+      ee,
+      te
+    ],
     globalIdentifier: GLOBAL_IDENTIFIER,
     disabledFeatures: ES2017FLAG,
     onData,
@@ -552,15 +662,14 @@ function createSerializer({
   });
 }
 function getLocalHeaderScript(id) {
-  return hr(id) + ';';
+  return Nr(id) + ";";
 }
 
-const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$/i;
+const VOID_ELEMENTS =
+  /^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$/i;
 const REPLACE_SCRIPT = `function $df(e,n,o,t){if(n=document.getElementById(e),o=document.getElementById("pl-"+e)){for(;o&&8!==o.nodeType&&o.nodeValue!=="pl-"+e;)t=o.nextSibling,o.remove(),o=t;_$HY.done?o.remove():o.replaceWith(n.content)}n.remove(),_$HY.fe(e)}`;
 function renderToStringAsync(code, options = {}) {
-  const {
-    timeoutMs = 30000
-  } = options;
+  const { timeoutMs = 30000 } = options;
   let timeoutHandle;
   const timeout = new Promise((_, reject) => {
     timeoutHandle = setTimeout(() => reject("renderToString timed out"), timeoutMs);
@@ -571,13 +680,7 @@ function renderToStringAsync(code, options = {}) {
   });
 }
 function renderToStream(code, options = {}) {
-  let {
-    nonce,
-    onCompleteShell,
-    onCompleteAll,
-    renderId,
-    noScripts
-  } = options;
+  let { nonce, onCompleteShell, onCompleteAll, renderId, noScripts } = options;
   let dispose;
   const blockingPromises = [];
   const pushTask = task => {
@@ -593,11 +696,12 @@ function renderToStream(code, options = {}) {
   const onDone = () => {
     writeTasks();
     doShell();
-    onCompleteAll && onCompleteAll({
-      write(v) {
-        !completed && buffer.write(v);
-      }
-    });
+    onCompleteAll &&
+      onCompleteAll({
+        write(v) {
+          !completed && buffer.write(v);
+        }
+      });
     writable && writable.end();
     completed = true;
     if (firstFlushed) dispose();
@@ -654,17 +758,23 @@ function renderToStream(code, options = {}) {
       const first = html.indexOf(placeholder);
       if (first === -1) return;
       const last = html.indexOf(`<!--!$/${id}-->`, first + placeholder.length);
-      html = html.replace(html.slice(first, last + placeholder.length + 1), resolveSSRNode(payloadFn()));
+      html =
+        html.slice(0, first) +
+        resolveSSRNode(escape(payloadFn())) +
+        html.slice(last + placeholder.length + 1);
     },
     serialize(id, p, wait) {
       const serverOnly = sharedConfig.context.noHydrate;
       if (!firstFlushed && wait && typeof p === "object" && "then" in p) {
         blockingPromises.push(p);
-        !serverOnly && p.then(d => {
-          serializer.write(id, d);
-        }).catch(e => {
-          serializer.write(id, e);
-        });
+        !serverOnly &&
+          p
+            .then(d => {
+              serializer.write(id, d);
+            })
+            .catch(e => {
+              serializer.write(id, e);
+            });
       } else if (!serverOnly) serializer.write(id, p);
     },
     roots: 0,
@@ -674,11 +784,15 @@ function renderToStream(code, options = {}) {
     registerFragment(key) {
       if (!registry.has(key)) {
         let resolve, reject;
-        const p = new Promise((r, rej) => (resolve = r, reject = rej));
-        registry.set(key, err => queue(() => queue(() => {
-          err ? reject(err) : resolve(true);
-          queue(flushEnd);
-        })));
+        const p = new Promise((r, rej) => ((resolve = r), (reject = rej)));
+        registry.set(key, err =>
+          queue(() =>
+            queue(() => {
+              err ? reject(err) : resolve(true);
+              queue(flushEnd);
+            })
+          )
+        );
         serializer.write(key, p);
       }
       return (value, error) => {
@@ -691,7 +805,7 @@ function renderToStream(code, options = {}) {
           }
           if (!completed) {
             if (!firstFlushed) {
-              queue(() => html = replacePlaceholder(html, key, value !== undefined ? value : ""));
+              queue(() => (html = replacePlaceholder(html, key, value !== undefined ? value : "")));
               resolve(error);
             } else {
               buffer.write(`<template id="${key}">${value !== undefined ? value : " "}</template>`);
@@ -717,11 +831,12 @@ function renderToStream(code, options = {}) {
     if (tasks.length) html = injectScripts(html, tasks, nonce);
     buffer.write(html);
     tasks = "";
-    onCompleteShell && onCompleteShell({
-      write(v) {
-        !completed && buffer.write(v);
-      }
-    });
+    onCompleteShell &&
+      onCompleteShell({
+        write(v) {
+          !completed && buffer.write(v);
+        }
+      });
     shellCompleted = true;
   }
   return {
@@ -756,7 +871,7 @@ function renderToStream(code, options = {}) {
     pipeTo(w) {
       return allSettled(blockingPromises).then(() => {
         let resolve;
-        const p = new Promise(r => resolve = r);
+        const p = new Promise(r => (resolve = r));
         setTimeout(() => {
           doShell();
           const encoder = new TextEncoder();
@@ -786,13 +901,13 @@ function renderToStream(code, options = {}) {
   };
 }
 function HydrationScript(props) {
-  const {
-    nonce
-  } = sharedConfig.context;
-  return ssr(generateHydrationScript({
-    nonce,
-    ...props
-  }));
+  const { nonce } = sharedConfig.context;
+  return ssr(
+    generateHydrationScript({
+      nonce,
+      ...props
+    })
+  );
 }
 function ssr(t, ...nodes) {
   if (nodes.length) {
@@ -837,7 +952,8 @@ function ssrStyle(value) {
   return result;
 }
 function ssrElement(tag, props, children, needsId) {
-  if (props == null) props = {};else if (typeof props === "function") props = props();
+  if (props == null) props = {};
+  else if (typeof props === "function") props = props();
   const skipChildren = VOID_ELEMENTS.test(tag);
   const keys = Object.keys(props);
   let result = `<${tag}${needsId ? ssrHydrationKey() : ""} `;
@@ -845,7 +961,8 @@ function ssrElement(tag, props, children, needsId) {
   for (let i = 0; i < keys.length; i++) {
     const prop = keys[i];
     if (ChildProperties.has(prop)) {
-      if (children === undefined && !skipChildren) children = prop === "innerHTML" ? props[prop] : escape(props[prop]);
+      if (children === undefined && !skipChildren)
+        children = prop === "innerHTML" ? props[prop] : escape(props[prop]);
       continue;
     }
     const value = props[prop];
@@ -854,27 +971,42 @@ function ssrElement(tag, props, children, needsId) {
     } else if (prop === "class" || prop === "className" || prop === "classList") {
       if (classResolved) continue;
       let n;
-      result += `class="${escape(((n = props.class) ? n + " " : "") + ((n = props.className) ? n + " " : ""), true) + ssrClassList(props.classList)}"`;
+      result += `class="${
+        escape(((n = props.class) ? n + " " : "") + ((n = props.className) ? n + " " : ""), true) +
+        ssrClassList(props.classList)
+      }"`;
       classResolved = true;
     } else if (BooleanAttributes.has(prop)) {
-      if (value) result += prop;else continue;
-    } else if (value == undefined || prop === "ref" || prop.slice(0, 2) === "on") {
+      if (value) result += prop;
+      else continue;
+    } else if (
+      value == undefined ||
+      prop === "ref" ||
+      prop.slice(0, 2) === "on" ||
+      prop.slice(0, 5) === "prop:"
+    ) {
       continue;
+    } else if (prop.slice(0, 5) === "bool:") {
+      if (!value) continue;
+      result += escape(prop.slice(5));
+    } else if (prop.slice(0, 5) === "attr:") {
+      result += `${escape(prop.slice(5))}="${escape(value, true)}"`;
     } else {
       result += `${Aliases[prop] || escape(prop)}="${escape(value, true)}"`;
     }
     if (i !== keys.length - 1) result += " ";
   }
-  if (skipChildren) return {
-    t: result + "/>"
-  };
+  if (skipChildren)
+    return {
+      t: result + "/>"
+    };
   if (typeof children === "function") children = children();
   return {
     t: result + `>${resolveSSRNode(children, true)}</${tag}>`
   };
 }
 function ssrAttribute(key, value, isBoolean) {
-  return isBoolean ? value ? " " + key : "" : value != null ? ` ${key}="${value}"` : "";
+  return isBoolean ? (value ? " " + key : "") : value != null ? ` ${key}="${value}"` : "";
 }
 function ssrHydrationKey() {
   const hk = getHydrationKey();
@@ -918,12 +1050,13 @@ function escape(s, attr) {
       left = iDelim + 1;
       iDelim = s.indexOf(delim, left);
     } while (iDelim >= 0);
-  } else while (iAmp >= 0) {
-    if (left < iAmp) out += s.substring(left, iAmp);
-    out += "&amp;";
-    left = iAmp + 1;
-    iAmp = s.indexOf("&", left);
-  }
+  } else
+    while (iAmp >= 0) {
+      if (left < iAmp) out += s.substring(left, iAmp);
+      out += "&amp;";
+      left = iAmp + 1;
+      iAmp = s.indexOf("&", left);
+    }
   return left < s.length ? out + s.substring(left) : out;
 }
 function resolveSSRNode(node, top) {
@@ -935,7 +1068,7 @@ function resolveSSRNode(node, top) {
     let mapped = "";
     for (let i = 0, len = node.length; i < len; i++) {
       if (!top && typeof prev !== "object" && typeof node[i] !== "object") mapped += `<!--!$-->`;
-      mapped += resolveSSRNode(prev = node[i]);
+      mapped += resolveSSRNode((prev = node[i]));
     }
     return mapped;
   }
@@ -948,16 +1081,17 @@ function getHydrationKey() {
   return hydrate && !hydrate.noHydrate && sharedConfig.getNextContextId();
 }
 function useAssets(fn) {
-  sharedConfig.context.assets.push(() => resolveSSRNode(fn()));
+  sharedConfig.context.assets.push(() => resolveSSRNode(escape(fn())));
 }
-function generateHydrationScript({
-  eventNames = ["click", "input"],
-  nonce
-} = {}) {
-  return `<script${nonce ? ` nonce="${nonce}"` : ""}>window._$HY||(e=>{let t=e=>e&&e.hasAttribute&&(e.hasAttribute("data-hk")?e:t(e.host&&e.host.nodeType?e.host:e.parentNode));["${eventNames.join('", "')}"].forEach((o=>document.addEventListener(o,(o=>{let a=o.composedPath&&o.composedPath()[0]||o.target,s=t(a);s&&!e.completed.has(s)&&e.events.push([s,o])}))))})(_$HY={events:[],completed:new WeakSet,r:{},fe(){}});</script><!--xs-->`;
+function generateHydrationScript({ eventNames = ["click", "input"], nonce } = {}) {
+  return `<script${
+    nonce ? ` nonce="${nonce}"` : ""
+  }>window._$HY||(e=>{let t=e=>e&&e.hasAttribute&&(e.hasAttribute("data-hk")?e:t(e.host&&e.host.nodeType?e.host:e.parentNode));["${eventNames.join(
+    '", "'
+  )}"].forEach((o=>document.addEventListener(o,(o=>{if(!e.events)return;let s=t(o.composedPath&&o.composedPath()[0]||o.target);s&&!e.completed.has(s)&&e.events.push([s,o])}))))})(_$HY={events:[],completed:new WeakSet,r:{},fe(){}});</script><!--xs-->`;
 }
 function NoHydration(props) {
-  sharedConfig.context.noHydrate = true;
+  if (sharedConfig.context) sharedConfig.context.noHydrate = true;
   return props.children;
 }
 function queue(fn) {
@@ -974,7 +1108,9 @@ function injectAssets(assets, html) {
   if (!assets || !assets.length) return html;
   let out = "";
   for (let i = 0, len = assets.length; i < len; i++) out += assets[i]();
-  return html.replace(`</head>`, out + `</head>`);
+  const index = html.indexOf("</head>");
+  if (index === -1) return html;
+  return html.slice(0, index) + out + html.slice(index);
 }
 function injectScripts(html, scripts, nonce) {
   const tag = `<script${nonce ? ` nonce="${nonce}"` : ""}>${scripts}</script>`;
@@ -1002,7 +1138,11 @@ function replacePlaceholder(html, key, value) {
 const isServer = true;
 
 function isWrappable(obj) {
-  return obj != null && typeof obj === "object" && (Object.getPrototypeOf(obj) === Object.prototype || Array.isArray(obj));
+  return (
+    obj != null &&
+    typeof obj === "object" &&
+    (Object.getPrototypeOf(obj) === Object.prototype || Array.isArray(obj))
+  );
 }
 function unwrap(item) {
   return item;
@@ -1051,11 +1191,7 @@ function updatePath(current, path, traversed = []) {
       }
       return;
     } else if (isArray && partType === "object") {
-      const {
-        from = 0,
-        to = current.length - 1,
-        by = 1
-      } = part;
+      const { from = 0, to = current.length - 1, by = 1 } = part;
       for (let i = from; i <= to; i += by) {
         updatePath(current, [i].concat(path), traversed);
       }
@@ -1073,7 +1209,7 @@ function updatePath(current, path, traversed = []) {
     if (value === next) return;
   }
   if (part === undefined && value == undefined) return;
-  if (part === undefined || isWrappable(next) && isWrappable(value) && !Array.isArray(value)) {
+  if (part === undefined || (isWrappable(next) && isWrappable(value) && !Array.isArray(value))) {
     mergeStoreNode(next, value);
   } else setProperty(current, part, value);
 }
