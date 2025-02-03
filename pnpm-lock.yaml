@@ -52,8 +52,8 @@ importers:
         specifier: ^0.3.11
         version: 0.3.11(solid-start@0.2.32)(vite@4.5.3(@types/node@22.12.0)(lightningcss@1.29.1)(terser@5.31.3))
       tailwindcss:
-        specifier: ^4.0.0
-        version: 4.0.0
+        specifier: ^4.0.3
+        version: 4.0.3
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
@@ -2488,6 +2488,9 @@ packages:
 
   tailwindcss@4.0.1:
     resolution: {integrity: sha512-UK5Biiit/e+r3i0O223bisoS5+y7ZT1PM8Ojn0MxRHzXN1VPZ2KY6Lo6fhu1dOfCfyUAlK7Lt6wSxowRabATBw==}
+
+  tailwindcss@4.0.3:
+    resolution: {integrity: sha512-ImmZF0Lon5RrQpsEAKGxRvHwCvMgSC4XVlFRqmbzTEDb/3wvin9zfEZrMwgsa3yqBbPqahYcVI6lulM2S7IZAA==}
 
   tapable@2.2.1:
     resolution: {integrity: sha512-GNzQvQTOIP6RyTfE2Qxb8ZVlNmw0n88vp1szwWRimP02mnTsx3Wtn5qRdqY9w2XduFNUgvOwhNnQsjwCp+kqaQ==}
@@ -5146,6 +5149,8 @@ snapshots:
   tailwindcss@4.0.0: {}
 
   tailwindcss@4.0.1: {}
+
+  tailwindcss@4.0.3: {}
 
   tapable@2.2.1: {}
 
