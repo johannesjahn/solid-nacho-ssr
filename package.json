@@ -13,7 +13,7 @@
     "daisyui": "^5.0.0-beta.6",
     "esbuild": "^0.24.2",
     "postcss": "^8.5.1",
-    "rollup": "^4.34.2",
+    "rollup": "^4.34.4",
     "solid-start-cloudflare-pages": "^0.2.26",
     "solid-start-node": "^0.3.11",
     "tailwindcss": "^4.0.3",
