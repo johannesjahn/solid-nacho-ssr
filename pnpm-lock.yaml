@@ -40,8 +40,8 @@ importers:
         specifier: ^0.25.0
         version: 0.25.0
       postcss:
-        specifier: ^8.5.1
-        version: 8.5.1
+        specifier: ^8.5.2
+        version: 8.5.2
       rollup:
         specifier: ^4.34.6
         version: 4.34.6
@@ -2239,8 +2239,8 @@ packages:
     resolution: {integrity: sha512-a7tsZy5gFbJr0aUltZS97xCkbPglXuD67AMvTyZX7BTDBH384FWf0ZQF6rPvdutSxnO1vUlXM2zSLf5tCKk5RA==}
     engines: {node: '>=8'}
 
-  postcss@8.5.1:
-    resolution: {integrity: sha512-6oz2beyjc5VMn/KV1pPw8fliQkhBXrVn1Z3TVyqZxU8kZpzEKhBdmCFqI6ZbmGtamQvQGuU1sgPTk8ZrXDD7jQ==}
+  postcss@8.5.2:
+    resolution: {integrity: sha512-MjOadfU3Ys9KYoX0AdkBlFEF1Vx37uCCeN4ZHnmwm9FfpbsGWMZeBLMmmpY+6Ocqod7mkdZ0DT31OlbsFrLlkA==}
     engines: {node: ^10 || ^12 || >=14}
 
   queue-microtask@1.2.3:
@@ -4049,7 +4049,7 @@ snapshots:
       '@tailwindcss/node': 4.0.5
       '@tailwindcss/oxide': 4.0.5
       lightningcss: 1.29.1
-      postcss: 8.5.1
+      postcss: 8.5.2
       tailwindcss: 4.0.5
 
   '@types/babel__core@7.20.5':
@@ -4860,7 +4860,7 @@ snapshots:
       '@polka/url': 1.0.0-next.25
       trouter: 3.2.1
 
-  postcss@8.5.1:
+  postcss@8.5.2:
     dependencies:
       nanoid: 3.3.8
       picocolors: 1.1.1
@@ -5252,7 +5252,7 @@ snapshots:
   vite@4.5.3(@types/node@22.13.1)(lightningcss@1.29.1)(terser@5.31.3):
     dependencies:
       esbuild: 0.18.20
-      postcss: 8.5.1
+      postcss: 8.5.2
       rollup: 3.29.5
     optionalDependencies:
       '@types/node': 22.13.1
