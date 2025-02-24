@@ -4,3 +4,11 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "daily"
+    groups:
+      any:
+        patterns:
+          - "*"
+        update-types:
+          - major
+          - minor
+          - patch
