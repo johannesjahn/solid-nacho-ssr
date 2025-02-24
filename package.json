@@ -14,17 +14,17 @@
     "esbuild": "^0.25.0",
     "postcss": "^8.5.3",
     "rollup": "^4.34.8",
-    "solid-start-cloudflare-pages": "^0.2.26",
+    "solid-start-cloudflare-pages": "^0.3.11",
     "solid-start-node": "^0.3.11",
     "tailwindcss": "^4.0.6",
     "typescript": "^5.7.3",
-    "vite": "^4.1.4"
+    "vite": "^6.1.1"
   },
   "dependencies": {
-    "@solidjs/meta": "^0.28.2",
-    "@solidjs/router": "^0.8.2",
+    "@solidjs/meta": "^0.29.4",
+    "@solidjs/router": "^0.15.3",
     "solid-js": "^1.9.5",
-    "solid-start": "^0.2.26",
+    "solid-start": "^0.3.11",
     "undici": "^7.3.0"
   },
   "engines": {
