@@ -7,7 +7,7 @@
   },
   "type": "module",
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.1",
+    "@tailwindcss/postcss": "^4.1.2",
     "@types/node": "^22.14.0",
     "csstype": "3.1.3",
     "daisyui": "^5.0.12",
@@ -18,7 +18,7 @@
     "solid-start-node": "^0.3.11",
     "tailwindcss": "^4.0.6",
     "typescript": "^5.8.2",
-    "vite": "^6.2.4"
+    "vite": "^6.2.5"
   },
   "dependencies": {
     "@solidjs/meta": "^0.29.4",
